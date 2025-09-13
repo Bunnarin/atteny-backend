@@ -1,0 +1,9 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.*
+
+# data
+pb_data/
