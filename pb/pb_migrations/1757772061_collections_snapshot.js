@@ -648,7 +648,7 @@ migrate((app) => {
           "id": "bool1547992806",
           "name": "emailVisibility",
           "presentable": false,
-          "required": true,
+          "required": false,
           "system": true,
           "type": "bool"
         },
@@ -660,20 +660,6 @@ migrate((app) => {
           "required": false,
           "system": true,
           "type": "bool"
-        },
-        {
-          "autogeneratePattern": "",
-          "hidden": false,
-          "id": "text2849095986",
-          "max": 255,
-          "min": 0,
-          "name": "full_name",
-          "pattern": "",
-          "presentable": true,
-          "primaryKey": false,
-          "required": false,
-          "system": false,
-          "type": "text"
         },
         {
           "hidden": false,
@@ -711,7 +697,21 @@ migrate((app) => {
           "pattern": "",
           "presentable": false,
           "primaryKey": false,
-          "required": true,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1579384326",
+          "max": 255,
+          "min": 0,
+          "name": "name",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
           "system": false,
           "type": "text"
         }
@@ -738,7 +738,7 @@ migrate((app) => {
         "mappedFields": {
           "avatarURL": "",
           "id": "",
-          "name": "full_name",
+          "name": "name",
           "username": ""
         }
       },
@@ -819,7 +819,7 @@ migrate((app) => {
         {
           "hidden": false,
           "id": "number447892753",
-          "max": 100,
+          "max": 10000,
           "min": 1,
           "name": "proximity",
           "onlyInt": true,
