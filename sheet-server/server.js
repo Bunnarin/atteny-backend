@@ -18,7 +18,6 @@ const oauthClient = new OAuth2Client({
 
 app.post('/clockin', async (req, res) => {
     try {
-        console.log(JSON.stringify(req.body));
         const { file_id, sheet_name, refresh_token, name } = req.body;
         oauthClient.credentials.refresh_token = refresh_token;
         const doc = new GoogleSpreadsheet(file_id, oauthClient);
@@ -65,7 +64,4 @@ app.post('/approve', async (req, res) => {
     }
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Sheets sync server running on http://localhost:${PORT}`);
-});
+app.listen(3000, '127.0.0.1');

@@ -38,7 +38,7 @@ routerAdd("POST", "/approve/{id}", (e) => {
         // write to the sheet
         const res = $http.send({
             method: "POST",
-            url: "http://localhost:3000/approve",
+            url: "http://127.0.0.1:3000/approve",
             body: { request },
         })
         // delete the request

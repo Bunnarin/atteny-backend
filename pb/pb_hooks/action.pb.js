@@ -9,7 +9,7 @@ routerAdd("POST", "/clockin/{id}", (e) => {
         // write to the sheet
         const res = $http.send({
             method: "POST",
-            url: "http://localhost:3000/clockin",
+            url: "http://127.0.0.1:3000/clockin",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 file_id: workplace.get('file_id'), 
@@ -18,7 +18,6 @@ routerAdd("POST", "/clockin/{id}", (e) => {
                 name: e.auth.get('name') 
             }),
         })
-        console.log(JSON.stringify(res))
         return e.json(200, { "message": "success" })
     } catch (error) {
         console.log(error);
