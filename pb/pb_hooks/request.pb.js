@@ -34,8 +34,7 @@ routerAdd("POST", "/approve/{id}", (e) => {
             subject: "Leave Request Approved",
             html:    `your leave request for ${request.get('date')} has been approved`,
         })
-        // e.app.newMailClient().send(message)
-
+        e.app.newMailClient().send(message)
 
         // write to the sheet
         const workplace = request.expandedOne('workplace')
