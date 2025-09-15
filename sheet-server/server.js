@@ -1,6 +1,3 @@
-// This server is a microservice that runs in a full Node.js environment.
-// It handles all the complex logic of communicating with the Google Sheets API.
-// It expects a POST request from the PocketBase hook.
 require('dotenv').config();
 
 const express = require('express');
@@ -42,16 +39,13 @@ app.post('/clockin', async (req, res) => {
 
 app.post('/approve', async (req, res) => {
     try {
-        // get the employer's credential
-        const { request } = req.body;
-        const workspace = request.expand.workplace;
-        oauthClient.credentials.refresh_token = workspace.expand.employer.google_refresh_token;
-        const doc = new GoogleSpreadsheet(workspace.file_id, oauthClient);
+        const { file_id, sheet_name, refresh_token, name, date, reason } = req.body;
+        oauthClient.credentials.refresh_token = refresh_token;
+        const doc = new GoogleSpreadsheet(file_id, oauthClient);
         await doc.loadInfo();
-        const date = request.date.toString().slice(0, 10);
-        const log = [date, request.reason, request.expand.createdBy.name];
-        let sheet = doc.sheetsByTitle[workspace.name + ' leave log'];
-        if (!sheet) sheet = await doc.addSheet({ title: `${workspace.name} leave log`, headerValues: ['Date', 'Reason', 'Name'] });
+        const log = [date, reason, name];
+        let sheet = doc.sheetsByTitle[sheet_name];
+        if (!sheet) sheet = await doc.addSheet({ title: sheet_name, headerValues: ['Date', 'Reason', 'Name'] });
         try {
             sheet.addRow(log);
         } catch { // it doesnt have header
@@ -60,6 +54,7 @@ app.post('/approve', async (req, res) => {
         }
         res.json({ success: true, message: "Row added to sheet." });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ success: false, message: error });
     }
 });

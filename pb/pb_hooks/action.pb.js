@@ -29,20 +29,25 @@ routerAdd("POST", "/clockin/{id}", (e) => {
 routerAdd("POST", "/subscribe/{id}", (e) => {
     try {
         const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
-        $app.expandRecord(workplace, ["employer"], null)
+        if (workplace.get('employees').includes(e.auth.id))
+            return e.json(200, { "message": "already subscribed" })
+
         // ensure that the employer free_spots still has room for one more
+        $app.expandRecord(workplace, ["employer"], null)
         const employer = workplace.expandedOne('employer')
         if (employer.get('free_spots') === 0) 
             return e.json(400, { "error": "No more free spots available" })
+
         // add the user to the workplace
         workplace.set('employees+', e.auth.id)
         $app.save(workplace)
+
         // update the employer free_spots
         employer.set('free_spots', employer.get('free_spots') - 1)
         $app.save(employer)
+        return e.json(200, { "message": "success" })
     } catch (error) {
         console.log(error);
         return e.json(400, { "error": error })
     }
-    return e.json(200, { "message": "success" })
 }, $apis.requireAuth())
