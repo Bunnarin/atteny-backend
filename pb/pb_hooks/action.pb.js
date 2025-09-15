@@ -18,6 +18,8 @@ routerAdd("POST", "/clockin/{id}", (e) => {
                 name: e.auth.get('name') 
             }),
         })
+        if (!res.json.success)
+            return e.json(400, { "error": res.json.message })
         return e.json(200, { "message": "success" })
     } catch (error) {
         console.log(error);
