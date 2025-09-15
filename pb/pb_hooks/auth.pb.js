@@ -11,8 +11,9 @@ onRecordAuthWithOAuth2Request((e) => {
 })
 
 onRecordAfterCreateSuccess((e) => {
+    const config = require(`${__hooks}/config.js`)
     e.record.set('emailVisibility', true)
-    e.record.set('free_spots', 5)
+    e.record.set('free_spots', config.INITIAL_FREE_SPOTS())
     $app.save(e.record)
     e.next()
 }, "users")
