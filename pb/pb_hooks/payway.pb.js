@@ -17,13 +17,12 @@ routerAdd("POST", "/buy/{quantity}", (e) => {
     })
 }, $apis.requireAuth())
 
-
 routerAdd("POST", "/payway/webhook", (e) => {
     const config = require(`${__hooks}/config.js`)
     const { amount, email } = e.request.body
     const quantity = amount / config.UNIT_PRICE()
-    let user = $app.findFirstRecordByData("users", "email", email)
+    const user = $app.findFirstRecordByData("users", "email", email)
     user.set('free_spots', user.get('free_spots') + quantity)
     $app.save(user)
-    return e.json(200, { "message": "success" })
+    return e.json(204)
 })

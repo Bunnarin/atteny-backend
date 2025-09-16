@@ -1,13 +1,11 @@
 onRecordAuthWithOAuth2Request((e) => {
     if (e.isNewRecord)
         e.createData = { ip_address: e.realIP() }
-
-    e.next()
-
-    if (!e.isNewRecord) {
+    else {
         e.record.set('ip_address', e.realIP())
         $app.save(e.record)
     }
+    e.next()
 })
 
 onRecordAfterCreateSuccess((e) => {

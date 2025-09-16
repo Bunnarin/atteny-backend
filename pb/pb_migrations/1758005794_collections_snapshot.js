@@ -942,7 +942,7 @@ migrate((app) => {
           "min": "",
           "name": "date",
           "presentable": false,
-          "required": false,
+          "required": true,
           "system": false,
           "type": "date"
         },
@@ -959,10 +959,24 @@ migrate((app) => {
           "required": true,
           "system": false,
           "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number2254405824",
+          "max": null,
+          "min": 1,
+          "name": "duration",
+          "onlyInt": true,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
         }
       ],
       "id": "pbc_2865033333",
-      "indexes": [],
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_PvhVoHGgce` ON `request` (\n  `createdBy`,\n  `workplace`,\n  `date`\n)"
+      ],
       "listRule": "@request.auth.id = workplace.employer",
       "name": "request",
       "system": false,
