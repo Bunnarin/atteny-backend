@@ -37,16 +37,14 @@ routerAdd("POST", "/subscribe/{id}", (e) => {
         // ensure that the employer free_spots still has room for one more
         $app.expandRecord(workplace, ["employer"], null)
         const employer = workplace.expandedOne('employer')
-        if (employer.get('free_spots') === 0) 
+        const total_employees = $app.findRecordById("total_employees", employer.get('id'))
+        const free_spots = employer.get('max_employees') - total_employees.get('value')
+        if (free_spots === 0) 
             return e.json(400, { "error": "No more free spots available" })
 
         // add the user to the workplace
         workplace.set('employees+', e.auth.id)
         $app.save(workplace)
-
-        // update the employer free_spots
-        employer.set('free_spots', employer.get('free_spots') - 1)
-        $app.save(employer)
         return e.json(200, { "message": "success" })
     } catch (error) {
         console.log(error);

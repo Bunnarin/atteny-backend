@@ -30,7 +30,7 @@ routerAdd("POST", "/payway/webhook", (e) => {
     const { amount, email } = e.request.body
     const quantity = amount / config.UNIT_PRICE()
     const user = $app.findFirstRecordByData("users", "email", email)
-    user.set('free_spots', user.get('free_spots') + quantity)
+    user.set('max_employees', user.get('max_employees') + quantity)
     $app.save(user)
     return e.json(204)
 })
