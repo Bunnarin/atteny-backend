@@ -6,7 +6,7 @@ onRecordValidate((e) => {
     const free_spots = employer.get('free_spots')
     const diff = e.record.get('employees').length - e.record.original().get('employees').length
     if (diff > free_spots)
-        e.error("Not enough free spots")
+        throw new ApiError(400, "Not enough free spots")
 
     // second paywall
     const result = arrayOf(new DynamicModel({
@@ -35,7 +35,7 @@ onRecordValidate((e) => {
         })
         .all(result)
     if (result.length)  
-        e.error("There is another workplace within 100m. Each workplace must be 100m unique")
+        throw new ApiError(400, "There is another workplace within 100m. Each workplace must be 100m unique")
 
     employer.set('free_spots', free_spots - diff)    
     $app.save(employer)
