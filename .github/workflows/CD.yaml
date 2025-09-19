@@ -18,7 +18,7 @@ jobs:
       - name: Deploy project over SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ vars.HOSTNAME }}
+          host: ${{ vars.HOST_IP }}
           username: ${{ vars.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
