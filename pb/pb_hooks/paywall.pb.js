@@ -3,8 +3,10 @@ onRecordValidate((e) => {
     // first paywall
     $app.expandRecord(e.record, ["employer"], null)
     const employer = e.record.expandedOne('employer')
-    const total_employees = $app.findRecordById("total_employees", employer.get('id'))
-    const free_spots = employer.get('max_employees') - total_employees.get('value')
+    let total_employees = 0;
+    try { total_employees = $app.findRecordById("total_employees", employer.get('id')).get('value') }
+    catch {}
+    const free_spots = employer.get('max_employees') - total_employees
     const diff = e.record.get('employees').length - e.record.original().get('employees').length
     if (diff > free_spots)
         throw new ApiError(400, "Not enough free spots")
@@ -36,7 +38,6 @@ onRecordValidate((e) => {
         })
         .all(result)
     if (result.length)  
-        throw new ApiError(400, "There is another workplace within 100m. Each workplace must be 100m unique")
-
+        throw new ApiError(400, `There is another workplace within ${config.UNIQUE_DISTANCE()}m. Each workplace must be ${config.UNIQUE_DISTANCE()}m unique`)
     e.next()
 }, "workplace")
