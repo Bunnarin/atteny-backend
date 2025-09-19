@@ -666,7 +666,7 @@ migrate((app) => {
           "id": "number2770953496",
           "max": null,
           "min": null,
-          "name": "free_spots",
+          "name": "max_employees",
           "onlyInt": true,
           "presentable": false,
           "required": false,
