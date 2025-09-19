@@ -9,28 +9,20 @@ on:
 
 jobs:
   deploy_production:
-    defaults:
-      run:
-        shell: bash
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
       
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan ${{ vars.HOSTNAME }} >> ~/.ssh/known_hosts
-      
-      - name: Execute deployment script
-        run: |
-          ssh -i ~/.ssh/id_rsa \
-            -o StrictHostKeyChecking=no \
-            ${{ vars.USERNAME }}@${{ vars.HOSTNAME }} "
-              cd atteny-backend && git checkout main && git pull && \
-              ./pb/pocketbase migrate up && systemctl restart pocketbase && \
-              cd sheet-server && pnpm install && pm2 restart server.js
-            "
+      - name: Deploy project over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOSTNAME }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd atteny-backend && git checkout main && git pull && \
+            ./pb/pocketbase migrate up && systemctl restart pocketbase && \
+            cd sheet-server && pnpm install && pm2 restart server.js
