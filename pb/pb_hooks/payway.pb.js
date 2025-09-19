@@ -10,12 +10,12 @@ routerAdd("POST", "/buy/{quantity}", (e) => {
         return_params: {
             email: e.auth.get('email'),
             quantity: e.request.pathValue("quantity"),
-            payway_key: config.PAYWAY_KEY(),
+            hashed_email: $security.hs512(e.auth.get('email'), config.PAYWAY_KEY()),
         },
         merchant_id: config.PAYWAY_MERCHANT_ID(),
         tran_id: Math.floor(Date.now() / 1000),
-        continue_success_url: "atteny.popok.uk/buy/success",
-        cancel_url: "atteny.popok.uk",
+        continue_success_url: config.FRONTEND_ENDPOINT() + "/buy/success",
+        cancel_url: config.FRONTEND_ENDPOINT() + "/",
         currency: "USD",
     }
     let hashStr = ''
@@ -28,9 +28,9 @@ routerAdd("POST", "/buy/{quantity}", (e) => {
 
 routerAdd("POST", "/payway/webhook", (e) => {
     const config = require(`${__hooks}/config.js`)
-    // console.log(JSON.stringify(e.request.body))
-    const { quantity, email, payway_key } = e.request.body
-    if (payway_key !== config.PAYWAY_KEY())
+    console.log(JSON.stringify(e.request.body))
+    const { quantity, email, hashed_email } = e.request.body
+    if ($security.hs512(email, config.PAYWAY_KEY()) !== hashed_email)
         return e.json(401, { message: "Unauthorized" })
     const user = $app.findFirstRecordByData("users", "email", email)
     user.set('max_employees', user.get('max_employees') + quantity)
