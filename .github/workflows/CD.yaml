@@ -18,10 +18,9 @@ jobs:
       - name: Deploy project over SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.HOSTNAME }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
+          host: ${{ vars.HOSTNAME }}
+          username: ${{ vars.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd atteny-backend && git checkout main && git pull && \
             ./pb/pocketbase migrate up && systemctl restart pocketbase && \
