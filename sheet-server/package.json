@@ -1,0 +1,15 @@
+{
+  "name": "sheet-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "NODE_ENV=production node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.3.0",
+    "google-spreadsheet": "^5.0.2"
+  }
+}

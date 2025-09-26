@@ -1,0 +1,12 @@
+# dependencies
+node_modules/
+
+# environment variables
+.env
+.env.*
+config.js
+
+# pocketbase
+pb_data/
+pocketbase.exe
+pocketbase
