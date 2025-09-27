@@ -8,14 +8,14 @@ cronAdd("log_attendence", "@hourly", () => {
         "logs": "",
         "refresh_token": "",
     }))
-    // 150 every 2 mn = 4500 every hour
+    // 30 every 2 mn = 900 every hour if no problem. 1000 if some problematic stuff stalls time
     $app.db().newQuery(`
         SELECT w.id, w.file_id, w.name, w.logs, u.refresh_token
         FROM workplace w
         LEFT JOIN users u ON w.employer = u.id
         WHERE LENGTH(w.logs) > 2
         ORDER BY LENGTH(w.logs) DESC
-        LIMIT 3000
+        LIMIT 1000
     `).all(workplaces);
 
     // helper
@@ -27,9 +27,6 @@ cronAdd("log_attendence", "@hourly", () => {
                 )
             )
         );
-    const start = Date.now();
-    console.log(start)
-    for (let i=0; i<1500; i++)
     for (const workplace of workplaces) {
         const rows = transformLogsToArray(JSON.parse(workplace.logs))
         const res = $http.send({
@@ -42,10 +39,13 @@ cronAdd("log_attendence", "@hourly", () => {
                 refresh_token: workplace.refresh_token,
                 rows,
             }),
-            timeout: 300,
         })
-        if (res.statusCode == 429) // the express server can only throw 429
+        if (res.statusCode == 429) { //the express server will always throw 429
             sleep(60000)
+            // restart this i-th iteration
+            i--
+            continue
+        }
 
         const record = $app.findRecordById("workplace", workplace.id)
         // if it created a new spreadsheet, update the file_id
@@ -54,6 +54,4 @@ cronAdd("log_attendence", "@hourly", () => {
         record.set("logs", "{}")
         $app.saveNoValidate(record)
     }
-    console.log('end')
-    console.log(Date.now() - start)
 })

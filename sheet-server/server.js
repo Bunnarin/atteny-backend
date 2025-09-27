@@ -23,23 +23,24 @@ app.post('/append', async (req, res) => {
             await doc.loadInfo();
         } catch (error) {
             if (error.message.includes("429")) // so that we don't create alot of sheets
-                return res.status(429);
+                return res.status(429).end();
             doc = await create_spreadsheet(refresh_token, workplace_name);
             new_file_id = doc.spreadsheetId;
         }
         let sheet = doc.sheetsByTitle[workplace_name + " attendance log"];
         if (!sheet) sheet = await doc.addSheet({ title: workplace_name + " attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
-        try { await sheet.addRows(rows) } 
+        try { 
+            await sheet.addRows(rows) 
+        } 
         catch (error) {
-            if (error.message.includes("429")) // so that we don't create alot of sheets
-                return res.status(429);
+            if (error.message.includes("429")) // so that we don't set headerrow again
+                return res.status(429).end();
             await sheet.setHeaderRow(['Date', 'Time', 'Name', 'Tag']);
             sheet.addRows(rows);
         }
         res.json({ new_file_id });
-    } catch {
-        // sht will always be 429
-        res.status(429);
+    } catch { // sht will always be 429
+        res.status(429).end();
     }
 });
 
