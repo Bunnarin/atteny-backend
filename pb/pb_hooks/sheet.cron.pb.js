@@ -42,8 +42,6 @@ cronAdd("log_attendence", "@hourly", () => {
         })
         if (res.statusCode == 429) { //the express server will always throw 429
             sleep(60000)
-            // restart this i-th iteration
-            i--
             continue
         }
 

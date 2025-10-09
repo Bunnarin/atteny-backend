@@ -716,20 +716,6 @@ migrate((app) => {
           "type": "text"
         },
         {
-          "autogeneratePattern": "",
-          "hidden": false,
-          "id": "text1361565684",
-          "max": 0,
-          "min": 0,
-          "name": "payway_token",
-          "pattern": "",
-          "presentable": false,
-          "primaryKey": false,
-          "required": false,
-          "system": false,
-          "type": "text"
-        },
-        {
           "hidden": false,
           "id": "number1713300174",
           "max": null,
@@ -763,6 +749,15 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "bool1541920202",
+          "name": "paid_live_mode",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
         }
       ],
       "fileToken": {

@@ -24,8 +24,7 @@ onRecordCreate((e) => {
     e.record.set('test_group', Math.round(Math.random()))
     // free trial
     e.record.set('live_mode', true)
-    // this is to prevent any fker from spawning with payway_token
-    e.record.set('payway_token', '')
+    e.record.set('paid_live_mode', false)
     e.next()
 }, "users")
 

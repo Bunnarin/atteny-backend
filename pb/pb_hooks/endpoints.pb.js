@@ -33,10 +33,15 @@ routerAdd("POST", "/clockin/{id}", (e) => {
     const tag = matchingRule ? matchingRule.n : ""
 
     if (e.auth.get('live_mode')) {
-        const free_trial = !e.auth.get('payway_token')
         const row = [today, time, name, tag]
-        if (free_trial)
+
+        const free_trial = !e.auth.get('paid_live_mode')
+        if (free_trial) {
             row.push("(This is a demo. In the future, it will take at least an hour for the clock-in to appear. Enable live mode to get update in real time)")
+            e.auth.set('live_mode', false)
+            $app.saveNoValidate(e.auth)
+        }
+        
         const res = $http.send({
             method: "POST",
             url: config.SHEET_SERVER_ENDPOINT() + "/append",
@@ -54,11 +59,6 @@ routerAdd("POST", "/clockin/{id}", (e) => {
         if (res.json.new_file_id) {
             workplace.set('file_id', res.json.new_file_id)
             $app.saveNoValidate(workplace)
-        }
-
-        if (free_trial) {
-            e.auth.set('live_mode', false)
-            $app.saveNoValidate(e.auth)
         }
         
         return e.json(200)
@@ -89,52 +89,10 @@ routerAdd("POST", "/subscribe/{id}", (e) => {
     return e.json(200)
 }, $apis.requireAuth())
 
-// for AB testing
-routerAdd("GET", "/pricings", (e) => {
-    const config = require(`${__hooks}/config.js`)
-    return e.json(200, { 
-        rent_price: config.get_rent_price(e.auth.get('test_group')),
-        license_price: config.get_license_price(e.auth.get('test_group')),
-        live_mode_price: config.get_live_mode_price(e.auth.get('test_group')) 
-    })
-}, $apis.requireAuth())
-
-// to buy live mode
 routerAdd("POST", "/toggle-live-mode", (e) => {
-    const config = require(`${__hooks}/config.js`)
-    if (!e.auth.get('payway_token'))
-        return e.json(400, { "message": "no payway token" })
+    if (!e.auth.get('paid_live_mode'))
+        return e.json(403)
 
-    // upfront payment of the monthly price if activating
-    if (!e.auth.get('live_mode')) {
-        const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(0, 14)
-        const formData = {
-            request_time: timestamp,
-            tran_id: timestamp,
-            pwt: e.auth.get('payway_token'),
-            merchant_id: config.PAYWAY_MERCHANT_ID(),
-            ctid: e.auth.get('email'),
-            token_flag: 'MITR_FIX',
-            currency: 'USD',
-            amount: config.get_live_mode_price(e.auth.get('test_group')),
-        }
-        let hashStr = ''
-        for (const key of ['request_time', 'merchant_id', 'tran_id', 'amount', 'currency', 'items', 'ctid', 'pwt', 'first_name', 'last_name', 'email', 'phone', 'purchase_type', 'callback_url', 'custom_fields', 'return_params', 'payout', 'token_flag', 'shipping_fee'])
-            if (formData[key])
-                hashStr += formData[key]
-        const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY())
-        formData.hash = Buffer.from(hashedStr, 'hex').toString('base64')
-        const { json } = $http.send({
-            method: "POST",
-            url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v3/purchase/payment-credential",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(formData),
-        })
-        if (json.status.code != '00')
-            return e.json(400, { message: "upfront payment failed" })
-    }
-
-    // fulfillment
     e.auth.set('live_mode', !e.auth.get('live_mode'))
     $app.saveNoValidate(e.auth)
     return e.json(200)
