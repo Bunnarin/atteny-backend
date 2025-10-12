@@ -6,7 +6,7 @@ onRecordAuthWithOAuth2Request((e) => {
         //collect the refreshtoken if the frontend prompts for it
         if (e.oAuth2User.refreshToken)
             e.record.set('refresh_token', e.oAuth2User.refreshToken)
-        // e.record.set('ip_address', e.realIP())
+        e.record.set('ip_address', e.realIP())
         $app.saveNoValidate(e.record)
     }
     e.next()
@@ -25,6 +25,7 @@ onRecordCreate((e) => {
     // free trial
     e.record.set('live_mode', true)
     e.record.set('paid_live_mode', false)
+    
     e.next()
 }, "users")
 
@@ -39,7 +40,7 @@ onRecordAfterCreateSuccess((e) => {
 // cleanup unverified user so that we don't have any non-belonging user
 // we don't need to check if they belong in any workplace (since it's stored in a json array anw)
 // if we did delete any user that is in the json_array, the next time the employer save the workplace, it will be recreated anw
-cronAdd("cleanup_unverified_users", "@monthly", () => {
+cronAdd("cleanup_unverified_users", "@daily", () => {
     $app.db().newQuery(`DELETE FROM users WHERE verified = false`).execute()
 })
 

@@ -20,15 +20,15 @@ onRecordValidate((e) => {
             if (!emailRegex.test(email)) 
                 throw new ApiError(400, "Invalid email format: " + email)
         })
-        const emailStr = emails.join('", "')
+        const emailStr = emails.join('", "');
         const existingUsers = arrayOf(new DynamicModel({"email": ""}));
         $app.db().newQuery(`SELECT email FROM users WHERE email IN ("${emailStr}")`)
-            .all(existingUsers)
-        const userCollection = $app.findCollectionByNameOrId("users")
+            .all(existingUsers);
+        const userCollection = $app.findCollectionByNameOrId("users");
         emails.forEach(email => {
             if (existingUsers.find(user => user.email === email)) 
                 return;
-            // create on their behalf
+            // create on their behalf (we use the ORM cuz we want it to run onRecordCreate hooks)
             const newUser = new Record(userCollection);
             newUser.set("email", email);
             $app.save(newUser);

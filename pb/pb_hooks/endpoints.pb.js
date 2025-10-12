@@ -73,6 +73,13 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
         ]);
         currentDate.setDate(currentDate.getDate() + 1);
     }
+    // push it one last time incase finalDate was null and we needed to include the final date anw
+    rows.push([
+            currentDate.toDateString(), 
+            remark || "P",
+            employee.get('nickname') || employee.get('name'), 
+            "P"
+        ]);
 
     const res = $http.send({
         method: "POST",
@@ -115,10 +122,12 @@ routerAdd("POST", "/toggle-live-mode", (e) => {
 
 // endpoint to set the nickname of employees
 routerAdd("POST", "/set-nickname", (e) => {
-    const { employees } = e.requestInfo().body
+    const { employees } = e.requestInfo().body;
     // Im too fking lazy to update in batch
-    employees.forEach(({id, nickname}) => 
-        $app.db().newQuery(`UPDATE users SET nickname = {:nickname} WHERE id = {:id}`).bind({ nickname, id }).execute())
+    employees.forEach(({email, nickname}) => 
+        $app.db().newQuery(`
+            UPDATE users SET nickname = {:nickname} WHERE email = {:email}
+        `).bind({ nickname, email }).execute());
     
     return e.json(200)
 }, $apis.requireAuth())
