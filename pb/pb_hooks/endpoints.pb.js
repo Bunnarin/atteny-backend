@@ -1,45 +1,21 @@
 routerAdd("POST", "/clockin/{id}", (e) => {
-    const config = require(`${__hooks}/config.js`)
-
-    // validate that the user is an employee of the workplace
-    const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
-    if (!workplace.get('employees').includes(e.auth.id)) 
-        return e.json(400, { "error": "You are not authorized to clock in for this workplace" })
-
-    const { timezone } = e.requestInfo().body //passed from the frontend
+    const config = require(`${__hooks}/config.js`);
+    const { timezone, tag } = e.requestInfo().body;
     const [today, time] = new Date().toLocaleString('fr-BE', { timezone: timezone }).slice(0, 17).split(', ')
-
-    // check if there's any rules and find the rule that matches this time
-    const convertToMinutes = (timeStr) => {
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        return hours * 60 + minutes;
-    }
-    const isBetween = (timeStr, startStr, endStr) => {
-        const timeMn = convertToMinutes(timeStr);
-        const startMn = convertToMinutes(startStr);
-        const endMn = convertToMinutes(endStr);
-        if (endMn > startMn) //daytime
-            return timeMn > startMn && timeMn < endMn;
-        else //nighttime
-            return timeMn < startMn && timeMn > endMn;
-    }
-    
-    const rules = JSON.parse(workplace.get('rules'))
-    const matchingRule = rules.find(rule => isBetween(time, rule.s, rule.e));
-    if (rules.length && !matchingRule) 
-        return e.json(400, { "error": "Clock-in is not allowed at this time" })
-    // insert into the sheet if live mode
     const name = e.auth.get('nickname') || e.auth.get('name')
-    const tag = matchingRule ? matchingRule.n : ""
 
-    if (e.auth.get('live_mode')) {
-        const row = [today, time, name, tag]
+    const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
+    $app.expandRecord(workplace, ["employer"]);
+    const employer = workplace.expandedOne('employer');
 
-        const free_trial = !e.auth.get('paid_live_mode')
+    if (employer.get('live_mode')) {
+        const row = [today, time, name, tag];
+
+        const free_trial = !employer.get('paid_live_mode');
         if (free_trial) {
             row.push("(This is a demo. In the future, it will take at least an hour for the clock-in to appear. Enable live mode to get update in real time)")
-            e.auth.set('live_mode', false)
-            $app.saveNoValidate(e.auth)
+            employer.set('live_mode', false);
+            $app.saveNoValidate(employer);
         }
         
         const res = $http.send({
@@ -47,9 +23,9 @@ routerAdd("POST", "/clockin/{id}", (e) => {
             url: config.SHEET_SERVER_ENDPOINT() + "/append",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
-                file_id: workplace.get('file_id'),
                 workplace_name: workplace.get('name'),
-                refresh_token: e.auth.get('refresh_token'),
+                file_id: workplace.get('file_id'),
+                refresh_token: employer.get('refresh_token'),
                 rows: [row],
             }),
         })
@@ -65,14 +41,53 @@ routerAdd("POST", "/clockin/{id}", (e) => {
     }
     
     // add to the workplace's log if no live mode
-    const logs = JSON.parse(workplace.get('logs'))
+    const logs = JSON.parse(workplace.get('logs')) || {};
     // init the logs if it doesn't exist
     logs[today] ??= {};
     logs[today][tag] ??= {};
     logs[today][tag][name] ??= [];
     logs[today][tag][name].push(time);
-    workplace.set('logs', JSON.stringify(logs))
-    $app.saveNoValidate(workplace)
+    workplace.set('logs', JSON.stringify(logs));
+    $app.saveNoValidate(workplace);
+    return e.json(200);
+}, $apis.requireAuth())
+
+routerAdd("POST", "/approve-leave/{workplace_id}", e => {
+    const config = require(`${__hooks}/config.js`)
+    const { employee_id, remark, startDate, endDate } = e.requestInfo().body;
+    const workplace = $app.findRecordById('workplace', e.request.pathValue("workplace_id"));
+    // make sure that the auth is the employer
+    if (workplace.get('employer') != e.auth.get('id'))
+        return e.json(403)
+    const employee = $app.findRecordById('users', employee_id);
+
+    const currentDate = new Date(startDate);
+    const finalDate = new Date(endDate);
+    const rows = [];
+    while (currentDate <= finalDate) {
+        rows.push([
+            currentDate.toDateString(), 
+            remark || "P",
+            employee.get('nickname') || employee.get('name'), 
+            "P"
+        ]);
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const res = $http.send({
+        method: "POST",
+        url: config.SHEET_SERVER_ENDPOINT() + "/append",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            workplace_name: workplace.get('name'),
+            file_id: workplace.get('file_id'),
+            refresh_token: e.auth.get('refresh_token'),
+            rows,
+        }),
+    })
+    if (res.statusCode != 200) 
+        return e.json(res.statusCode)
+
     return e.json(200)
 }, $apis.requireAuth())
 
@@ -80,11 +95,11 @@ routerAdd("POST", "/clockin/{id}", (e) => {
 routerAdd("POST", "/subscribe/{id}", (e) => {
     const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
     if (workplace.get('employees').includes(e.auth.get('id')))
-        return e.json(400, { "message": "already subscribed" })
+        return e.json(200, { "message": "already subscribed" })
 
     // add the user to the workplace
     workplace.set('employees+', e.auth.get('id'))
-    // the workplace onValidate will check for payway token
+    // the workplace onValidate will enforce the max_employee limit
     $app.save(workplace)
     return e.json(200)
 }, $apis.requireAuth())

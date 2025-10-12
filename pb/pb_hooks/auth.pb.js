@@ -6,7 +6,7 @@ onRecordAuthWithOAuth2Request((e) => {
         //collect the refreshtoken if the frontend prompts for it
         if (e.oAuth2User.refreshToken)
             e.record.set('refresh_token', e.oAuth2User.refreshToken)
-        e.record.set('ip_address', e.realIP())
+        // e.record.set('ip_address', e.realIP())
         $app.saveNoValidate(e.record)
     }
     e.next()

@@ -1,0 +1,27 @@
+name: "CD Pipeline"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy_production:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Deploy project over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST_IP }}
+          username: ${{ vars.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd atteny-backend && git checkout main && git pull && \
+            ./pb/pocketbase migrate up && systemctl restart pocketbase && \
+            cd sheet-server && source ~/.bashrc && pnpm install && pm2 restart server.js
