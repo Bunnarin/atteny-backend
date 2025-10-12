@@ -1,6 +1,7 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-const express = require('express');
+import express from 'express';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { OAuth2Client } from 'google-auth-library';
 
