@@ -1,10 +1,11 @@
 {
   "name": "sheet-server",
   "version": "1.0.0",
-  "main": "server.js",
+  "type": "module",
+  "main": "server.mjs",
   "scripts": {
-    "dev": "node --watch server.js",
-    "start": "NODE_ENV=production node server.js"
+    "dev": "node --watch server.mjs",
+    "start": "NODE_ENV=production node server.mjs"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

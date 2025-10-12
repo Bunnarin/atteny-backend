@@ -1,8 +1,8 @@
 require('dotenv').config();
 
 const express = require('express');
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-const { OAuth2Client } = require('google-auth-library');
+import { GoogleSpreadsheet } from 'google-spreadsheet';
+import { OAuth2Client } from 'google-auth-library';
 
 const app = express();
 app.use(express.json()); // Enable JSON body parsing
