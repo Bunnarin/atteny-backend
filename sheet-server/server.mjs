@@ -74,6 +74,7 @@ async function create_spreadsheet(workplace_name) {
 
 // helper function to copy template to new sheet
 async function copy_dashboard(ssId) {
+    oauthClient.credentials.refresh_token = process.env.TEMPLATE_REFRESH_TOKEN;
     const template_ss = new GoogleSpreadsheet(process.env.TEMPLATE_SS_ID, oauthClient);
     await template_ss.loadInfo();
     const dashboard_sheet = template_ss.sheetsByIndex[0];
