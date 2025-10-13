@@ -23,5 +23,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd atteny-backend && git checkout main && git pull && \
-            ./pb/pocketbase migrate up && systemctl restart pocketbase && \
-            cd sheet-server && source ~/.bashrc && pnpm install && pm2 restart server.js
+            cd sheet-server && source ~/.bashrc && pnpm install && pm2 restart server.mjs
