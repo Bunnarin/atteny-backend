@@ -1,7 +1,7 @@
 routerAdd("POST", "/clockin/{id}", (e) => {
     const config = require(`${__hooks}/config.js`);
     const { time, tag } = e.requestInfo().body;
-    const [today, _] = time.slice(0, 17).split(', ');
+    const today = new Date().toLocaleDateString();
     const name = e.auth.get('nickname') || e.auth.get('name');
 
     const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
