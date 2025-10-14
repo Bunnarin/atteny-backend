@@ -5,6 +5,6 @@ module.exports = {
     FRONTEND_ENDPOINT: () => "https://test.popok.uk" ,
     SHEET_SERVER_ENDPOINT: () => "http://127.0.0.1:3000",
     PAYWAY_ENDPOINT: () => "https://checkout-sandbox.payway.com.kh",
-    get_license_price: (test_group) => 1,
+    get_employee_price: (test_group) => 1,
     get_live_mode_price: (test_group) => 10
 }

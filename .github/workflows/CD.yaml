@@ -23,4 +23,4 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd atteny-backend && git checkout main && git pull && \
-            cd sheet-server && source /root/.local/share/pnpm/ && pnpm install && pm2 restart server.mjs
+            cd sheet-server && /root/.local/share/pnpm/pnpm install && /root/.local/share/pnpm/pm2 restart server.mjs

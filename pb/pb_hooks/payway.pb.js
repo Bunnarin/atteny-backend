@@ -1,88 +1,69 @@
 // for AB testing
-routerAdd("GET", "/pricings", (e) => {
+routerAdd("GET", "/payway/params", (e) => {
     const config = require(`${__hooks}/config.js`)
     return e.json(200, { 
-        license_price: config.get_license_price(e.auth.get('test_group')),
-        live_mode_price: config.get_live_mode_price(e.auth.get('test_group')) 
+        employee_price: config.get_employee_price(e.auth.get('test_group')),
+        live_mode_price: config.get_live_mode_price(e.auth.get('test_group')),
+        merchant_id: config.PAYWAY_MERCHANT_ID()
     })
 }, $apis.requireAuth())
 
-routerAdd("GET", "/payway-merchant-id", e  => {
+// this route hash and also create a transaction record sicne we can't rely on payway's return url
+routerAdd("POST", "/payway/hash", e => {
     const config = require(`${__hooks}/config.js`)
-    e.json(200, { merchant_id: config.PAYWAY_MERCHANT_ID() })
-}, $apis.requireAuth())
-
-routerAdd("POST", "/hash-payway", e => {
-    const config = require(`${__hooks}/config.js`)
-    const { hashStr } = e.requestInfo().body
+    const { hashStr, tran_id } = e.requestInfo().body
     const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY())
-    const hash = Buffer.from(hashedStr, 'hex').toString('base64')
-    e.json(200, { hash })
+    const hash = Buffer.from(hashedStr, 'hex').toString('base64')    
+    e.json(200, { hash });
+
+    // create a transaction record (idc if it exists since we prioritise new over old)
+    $app.db().newQuery(` 
+        DELETE FROM pending_transaction WHERE user = '${e.auth.get('id')}';
+        INSERT INTO pending_transaction (id, user) VALUES ('${tran_id}', '${e.auth.get('id')}');
+    `).execute();
 }, $apis.requireAuth())
 
-routerAdd("POST", "/webhook/purchase/{user_id}", (e) => {
+routerAdd("GET", "/webhook/{item}", e => {
     const config = require(`${__hooks}/config.js`)
-    const { tran_id } = e.requestInfo().body
 
-    // first we check if the tran_id exists and is at most 10mn recent
-    const formData = {
+    // first we check if the tran_id exist in our database
+    const transaction = $app.findFirstRecordByData("pending_transaction", "user", e.auth.get('id'));
+    if (!transaction)
+        return e.json(400, { "error": "invalid transaction" })
+
+    // then check if the transaction is approved in payway database
+    const payload = {
         req_time: Math.floor(Date.now() / 1000),
         merchant_id: config.PAYWAY_MERCHANT_ID(),
-        tran_id,
+        tran_id: transaction.get('id'),
     }
-    const hashStr = formData.req_time + formData.merchant_id + formData.tran_id
+    const hashStr = payload.req_time + payload.merchant_id + payload.tran_id
     const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY())
-    formData.hash = Buffer.from(hashedStr, 'hex').toString('base64')
-
+    payload.hash = Buffer.from(hashedStr, 'hex').toString('base64')
     const { json } = $http.send({
         method: "POST",
         url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v1/payments/check-transaction-2",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
     })
+    if (json.data.payment_status != 'APPROVED')
+        return e.json(400, { "error": "invalid transaction" })
 
-    const TEN_MINUTES = Date.now() - 10 * 60 * 1000;
-    const transaction_date = Date.parse(json.data.transaction_date.replace(' ', 'T'))
-    if (json.data.payment_status_code != 0 || transaction_date < TEN_MINUTES)
-        return e.json(400, { "error": "webhook rejected" })
-    
     // fullfillment
-    const user = $app.findRecordById("users", e.request.pathValue("user_id"))
-    const quantity = json.data.original_amount / config.get_license_price(user.get('test_group'))
-    user.set('max_employees', user.get('max_employees') + quantity)
-    $app.saveNoValidate(user)
-    return e.json(200)
-})
-
-routerAdd("POST", "/webhook/live-mode/{user_id}", (e) => {
-    const config = require(`${__hooks}/config.js`)
-    const { tran_id } = e.requestInfo().body
-
-    // first we check if the tran_id exists and is at most 10mn recent
-    const formData = {
-        req_time: Math.floor(Date.now() / 1000),
-        merchant_id: config.PAYWAY_MERCHANT_ID(),
-        tran_id,
+    const item = e.request.pathValue("item");
+    if (item == "employee") {
+        const quantity = json.data.total_amount / config.get_employee_price(e.auth.get('test_group'))
+        e.auth.set('max_employees', e.auth.get('max_employees') + quantity)
+        $app.saveNoValidate(e.auth);
+    } else if (item == "live-mode") {
+        const paidInFull = json.data.total_amount == config.get_live_mode_price(e.auth.get('test_group'));
+        if (!paidInFull)
+            return e.json(400, { "error": "invalid transaction" })
+        e.auth.set('paid_live_mode', true);
+        e.auth.set('live_mode', true);
+        $app.saveNoValidate(e.auth);
     }
-    const hashStr = formData.req_time + formData.merchant_id + formData.tran_id
-    const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY())
-    formData.hash = Buffer.from(hashedStr, 'hex').toString('base64')
-
-    const { json } = $http.send({
-        method: "POST",
-        url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v1/payments/check-transaction-2",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(formData),
-    })
-
-    const TEN_MINUTES = Date.now() - 10 * 60 * 1000;
-    const transaction_date = Date.parse(json.data.transaction_date.replace(' ', 'T'))
-    if (json.data.payment_status_code != 0 || transaction_date < TEN_MINUTES)
-        return e.json(400, { "error": "webhook rejected" })
-    
-    // fullfillment
-    $app.db().newQuery(`
-        UPDATE users SET paid_live_mode = true WHERE id = {:user_id}
-    `).bind({ user_id: e.request.pathValue("user_id") }).execute()
-    return e.json(200)
-})
+    // delete the transaction
+    $app.delete(transaction);
+    return e.json(200);
+}, $apis.requireAuth())
