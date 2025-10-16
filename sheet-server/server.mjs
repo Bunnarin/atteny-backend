@@ -3,16 +3,26 @@ dotenv.config();
 
 import express from 'express';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client, JWT } from 'google-auth-library';
 
 const app = express();
 app.use(express.json()); // Enable JSON body parsing
 
-// Create a JWT client for authentication.
+// for adding to their sheet
 const oauthClient = new OAuth2Client({
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  });
+});
+
+// for adding the dashboard
+const jwtClient = new JWT({
+    email: process.env.SERVICE_ACCOUNT_EMAIL,
+    key: process.env.SERVICE_ACCOUNT_KEY.replace(/\\n/g, "\n"),
+    scopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive.file',
+        ],
+});
 
 app.post('/append', async (req, res) => {
     try {
@@ -32,6 +42,7 @@ app.post('/append', async (req, res) => {
         let sheet = doc.sheetsByTitle["attendance log"];
         if (!sheet) {
             sheet = await doc.addSheet({ title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
+            await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
             create_dashboard(doc);
         }
 
@@ -66,6 +77,7 @@ app.post('/create', async (req, res) => {
 
 async function create_spreadsheet(workplace_name) {
     const doc = await GoogleSpreadsheet.createNewSpreadsheetDocument(oauthClient, { title: workplace_name + " (created by Atteny)" });
+    await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
     // rename the default Sheet1
     const defaultSheet = doc.sheetsByIndex[0];
     await defaultSheet.updateProperties({ title: "attendance log" });
@@ -75,51 +87,12 @@ async function create_spreadsheet(workplace_name) {
 }
 
 // helper function to copy template to new sheet
+// the jwt has both access to the template and the user's sheet
 async function create_dashboard(doc) {
-    const dashboard_sheet = await doc.addSheet({ title: "attendance dashboard", headerValues: ['Please do not edit this sheet directly. Ctrl+A, Ctrl+C, Ctrl+shift+V to copy to another sheet']});
-    dashboard_sheet.addRows([
-        ['name', 'A', `=IFERROR(TRANSPOSE(SORT(UNIQUE(FILTER('attendance log'!A2:A999, 'attendance log'!A2:A999<>"")))),)`],
-        [
-            `=IFERROR(UNIQUE(FILTER('attendance log'!C2:C1000, 'attendance log'!C2:C1000<>"")),)`,
-            `=ARRAYFORMULA(BYROW(C3:AL101, LAMBDA(row, IF(COUNTIF(row, "A")=0, "", COUNTIF(row, "A")))))`,
-            `=ARRAYFORMULA(BYCOL(C2:AG2, 
-                  LAMBDA(date_col, 
-                    IF(date_col="",,
-                      BYROW(A3:A102, 
-                        LAMBDA(name_row, 
-                          IF(name_row="",, 
-                              IFERROR(TEXTJOIN(CHAR(10), TRUE, 
-                                FILTER(
-                                  'attendance log'!B2:B999, 
-                                  'attendance log'!A2:A999 = date_col, 
-                                  'attendance log'!C2:C999 = name_row
-                                )
-                              ), "A")
-                          )
-                        )
-                      )
-                    )
-                  )
-                ))`
-        ]
-    ]);
-    await dashboard_sheet.resize({ rowCount: 100, columnCount: 33 });
-    await dashboard_sheet.loadCells('A2:AG2');
-    // now we color the headerrow
-    for (let i = 0; i < 33; i++) {
-        const cell = dashboard_sheet.getCell(1, i);
-        // sht does not work and only give me blue color
-        cell.backgroundColor = {
-            red: 245,
-            green: 73,
-            blue: 39,
-        };
-        // cell.numberFormat = {
-        //     type: "DATE",
-        //     pattern: "mmmm d dddd"
-        // };
-    }
-    dashboard_sheet.saveUpdatedCells();
+    const template_ss = new GoogleSpreadsheet(process.env.TEMPLATE_SS_ID, jwtClient);
+    await template_ss.loadInfo();
+    template_ss.sheetsByIndex[0].copyToSpreadsheet(doc.spreadsheetId);
+    template_ss.sheetsByIndex[1].copyToSpreadsheet(doc.spreadsheetId);
 }
 
 app.listen(3000, '127.0.0.1');
