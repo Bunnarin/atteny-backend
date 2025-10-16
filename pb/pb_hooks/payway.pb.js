@@ -19,7 +19,7 @@ routerAdd("POST", "/payway/hash", e => {
     // create a transaction record (idc if it exists since we prioritise new over old)
     $app.db().newQuery(` 
         DELETE FROM pending_transaction WHERE user = '${e.auth.get('id')}';
-        INSERT INTO pending_transaction (id, user) VALUES ('${tran_id}', '${e.auth.get('id')}');
+        INSERT INTO pending_transaction (createdOn, id, user) VALUES ('${new Date().toISOString().replace('T', ' ')}', '${tran_id}', '${e.auth.get('id')}');
     `).execute();
 }, $apis.requireAuth())
 

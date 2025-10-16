@@ -5,6 +5,13 @@ cronAdd("temp_payway", "* * * * *", () => {
     transactions.forEach(transaction => {
         transaction.set('locked', true);
         $app.saveNoValidate(transaction);
+        // read createdOn to ensure we only chekc 1mn after creation, if not 1mn yet, sleep until 1mn
+        const createdOn = transaction.get('createdOn');
+        const timeTilAMinute = 60 * 1000 - (Date.now() - new Date(createdOn).getTime());
+        console.log(timeTilAMinute);
+        if (timeTilAMinute > 0) 
+            sleep(timeTilAMinute);
+        
         // then check if the transaction is approved in payway database
         const payload = {
             merchant_id: config.PAYWAY_MERCHANT_ID(),
