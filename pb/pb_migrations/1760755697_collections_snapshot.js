@@ -586,7 +586,7 @@ migrate((app) => {
         "subject": "Confirm your {APP_NAME} new email address"
       },
       "createRule": "",
-      "deleteRule": "id = @request.auth.id",
+      "deleteRule": null,
       "emailChangeToken": {
         "duration": 1800
       },
@@ -728,15 +728,6 @@ migrate((app) => {
           "type": "number"
         },
         {
-          "hidden": false,
-          "id": "bool1219913435",
-          "name": "live_mode",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text2710109796",
@@ -749,15 +740,6 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "text"
-        },
-        {
-          "hidden": false,
-          "id": "bool1541920202",
-          "name": "paid_live_mode",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
         }
       ],
       "fileToken": {
@@ -863,7 +845,7 @@ migrate((app) => {
         {
           "hidden": false,
           "id": "number447892753",
-          "max": 10000,
+          "max": 40075000,
           "min": 1,
           "name": "proximity",
           "onlyInt": true,
@@ -924,9 +906,9 @@ migrate((app) => {
           "type": "json"
         },
         {
-          "hidden": false,
+          "hidden": true,
           "id": "json4035954268",
-          "maxSize": 0,
+          "maxSize": 10,
           "name": "logs",
           "presentable": false,
           "required": false,
@@ -936,7 +918,8 @@ migrate((app) => {
       ],
       "id": "pbc_3033560182",
       "indexes": [
-        "CREATE UNIQUE INDEX `idx_mYvNhr7F5O` ON `workplace` (\n  `name`,\n  `employer`\n)"
+        "CREATE UNIQUE INDEX `idx_mYvNhr7F5O` ON `workplace` (\n  `name`,\n  `employer`\n)",
+        "CREATE INDEX `idx_logs_length` ON `workplace` (LENGTH(`logs`))"
       ],
       "listRule": "@request.auth.id = employer.id || employees.id ?= @request.auth.id",
       "name": "workplace",
@@ -983,6 +966,49 @@ migrate((app) => {
       "updateRule": null,
       "viewQuery": "SELECT \n    users.id, \n    COALESCE(SUM(JSON_ARRAY_LENGTH(workplace.employees)), 0) as total_employees\nFROM users\nLEFT JOIN workplace ON users.id = workplace.employer\nGROUP BY users.id;",
       "viewRule": "@request.auth.id = id"
+    },
+    {
+      "createRule": null,
+      "deleteRule": null,
+      "fields": [
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 100,
+          "min": 15,
+          "name": "id",
+          "pattern": "^[a-z0-9]+$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation2375276105",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "user",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        }
+      ],
+      "id": "pbc_1764142239",
+      "indexes": [
+        "CREATE UNIQUE INDEX `idx_l2DjCJWPT2` ON `pending_transaction` (`user`)"
+      ],
+      "listRule": null,
+      "name": "pending_transaction",
+      "system": false,
+      "type": "base",
+      "updateRule": null,
+      "viewRule": null
     }
   ];
 

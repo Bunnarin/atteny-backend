@@ -6,38 +6,6 @@ routerAdd("POST", "/clockin/{id}", (e) => {
     const workplace = $app.findRecordById('workplace', e.request.pathValue("id"));
     $app.expandRecord(workplace, ["employer"]);
     const employer = workplace.expandedOne('employer');
-
-    if (employer.get('live_mode')) {
-        const row = [date, time, name, tag];
-
-        const free_trial = !employer.get('paid_live_mode');
-        if (free_trial) {
-            row.push("(This is a demo. In the future, it will take at least an hour for the clock-in to appear. Enable live mode to get updates in real time)")
-            employer.set('live_mode', false);
-            $app.saveNoValidate(employer);
-        }
-        
-        const res = $http.send({
-            method: "POST",
-            url: config.SHEET_SERVER_ENDPOINT() + "/append",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                workplace_name: workplace.get('name'),
-                file_id: workplace.get('file_id'),
-                refresh_token: employer.get('refresh_token'),
-                rows: [row],
-            }),
-        })
-        if (res.statusCode != 200) 
-            return e.json(res.statusCode)
-
-        if (res.json.new_file_id) {
-            workplace.set('file_id', res.json.new_file_id)
-            $app.saveNoValidate(workplace)
-        }
-        
-        return e.json(200)
-    }
     
     // add to the workplace's log if no live mode
     const logs = JSON.parse(workplace.get('logs')) || {};
@@ -107,15 +75,6 @@ routerAdd("POST", "/subscribe/{id}", (e) => {
     workplace.set('employees+', e.auth.get('id'))
     // the workplace onValidate will enforce the max_employee limit
     $app.save(workplace)
-    return e.json(200)
-}, $apis.requireAuth())
-
-routerAdd("POST", "/toggle-live-mode", (e) => {
-    if (!e.auth.get('paid_live_mode'))
-        return e.json(403)
-
-    e.auth.set('live_mode', !e.auth.get('live_mode'))
-    $app.saveNoValidate(e.auth)
     return e.json(200)
 }, $apis.requireAuth())
 

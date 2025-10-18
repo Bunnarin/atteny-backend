@@ -24,7 +24,7 @@ nano /lib/systemd/system/pocketbase.service
     StandardOutput   = append:/root/atteny-backend/pb/std.log
     StandardError    = append:/root/atteny-backend/pb/std.log
     WorkingDirectory = /root/atteny-backend/pb
-    ExecStart        = /root/atteny-backend/pb/pocketbase serve yourdomain.com
+    ExecStart        = /root/atteny-backend/pb/pocketbase serve atteny-backend.popok.uk --origins https://atteny.popok.uk
 
     [Install]
     WantedBy = multi-user.target

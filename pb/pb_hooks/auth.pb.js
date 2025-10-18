@@ -22,9 +22,6 @@ onRecordCreate((e) => {
     e.record.set('password', 'password')
     // A/B test: set random test_group
     e.record.set('test_group', Math.round(Math.random()))
-    // free trial
-    e.record.set('live_mode', true)
-    e.record.set('paid_live_mode', false)
     
     e.next()
 }, "users")
@@ -36,6 +33,13 @@ onRecordAfterCreateSuccess((e) => {
     $app.saveNoValidate(e.record)
     e.next()
 }, "users")
+
+// an interal endpoint that is only used to rm the refresh_token of an employee
+routerAdd("POST", "/rm-refresh-token", e => {
+    e.auth.set('refresh_token', null)
+    $app.saveNoValidate(e.auth)
+    e.json(200)
+}, $apis.requireAuth())
 
 // cleanup unverified user so that we don't have any non-belonging user
 // we don't need to check if they belong in any workplace (since it's stored in a json array anw)

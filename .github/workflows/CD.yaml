@@ -22,6 +22,5 @@ jobs:
           username: ${{ vars.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd atteny-backend && git checkout main && git pull && \
-            systemctl stop pocketbase && systemctl start pocketbase && \
+            cd atteny-backend && git pull && systemctl daemon-reload && \
             cd sheet-server && /root/.local/share/pnpm/pnpm install && /root/.local/share/pnpm/pm2 restart server.mjs
