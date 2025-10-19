@@ -20,6 +20,9 @@ importers:
       google-spreadsheet:
         specifier: ^5.0.2
         version: 5.0.2(google-auth-library@10.3.0)
+      googleapis:
+        specifier: ^164.0.0
+        version: 164.0.0
 
 packages:
 
@@ -190,6 +193,14 @@ packages:
     peerDependenciesMeta:
       google-auth-library:
         optional: true
+
+  googleapis-common@8.0.0:
+    resolution: {integrity: sha512-66if47It7y+Sab3HMkwEXx1kCq9qUC9px8ZXoj1CMrmLmUw81GpbnsNlXnlyZyGbGPGcj+tDD9XsZ23m7GLaJQ==}
+    engines: {node: '>=18.0.0'}
+
+  googleapis@164.0.0:
+    resolution: {integrity: sha512-aR2larBEvu6+HVC4Puu87T41/OA3WjVw2tQRYAMKit2kC95daFacIoDF70DeC4p9M/H5eZSalBJV1FOypR808A==}
+    engines: {node: '>=18'}
 
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
@@ -372,6 +383,9 @@ packages:
   unpipe@1.0.0:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
     engines: {node: '>= 0.8'}
+
+  url-template@2.0.8:
+    resolution: {integrity: sha512-XdVKMF4SJ0nP/O7XIPB0JwAEuT9lDIYnNsK8yGVe43y0AWoKeJNdv3ZNWh7ksJ6KqQFjOO6ox/VEitLnaVNufw==}
 
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
@@ -588,6 +602,23 @@ snapshots:
     optionalDependencies:
       google-auth-library: 10.3.0
 
+  googleapis-common@8.0.0:
+    dependencies:
+      extend: 3.0.2
+      gaxios: 7.1.2
+      google-auth-library: 10.3.0
+      qs: 6.14.0
+      url-template: 2.0.8
+    transitivePeerDependencies:
+      - supports-color
+
+  googleapis@164.0.0:
+    dependencies:
+      google-auth-library: 10.3.0
+      googleapis-common: 8.0.0
+    transitivePeerDependencies:
+      - supports-color
+
   gopd@1.2.0: {}
 
   gtoken@8.0.0:
@@ -787,6 +818,8 @@ snapshots:
       mime-types: 3.0.1
 
   unpipe@1.0.0: {}
+
+  url-template@2.0.8: {}
 
   vary@1.1.2: {}
 

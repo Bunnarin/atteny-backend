@@ -103,7 +103,6 @@ routerAdd("POST", "/clear-attendance/{workplace_id}", e => {
         url: config.SHEET_SERVER_ENDPOINT() + "/clear",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            workplace_name: workplace.get('name'),
             file_id: workplace.get('file_id'),
             refresh_token: e.auth.get('refresh_token'),
             newestDateToClear,
@@ -112,9 +111,5 @@ routerAdd("POST", "/clear-attendance/{workplace_id}", e => {
     if (res.statusCode != 200) 
         return e.json(res.statusCode)
 
-    if (res.json.new_file_id) {
-        workplace.set('file_id', res.json.new_file_id)
-        $app.saveNoValidate(workplace)
-    }
     return e.json(200)
 }, $apis.requireAuth())

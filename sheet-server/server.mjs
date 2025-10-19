@@ -4,6 +4,7 @@ dotenv.config();
 import express from 'express';
 import { GoogleSpreadsheet } from 'google-spreadsheet';
 import { OAuth2Client, JWT } from 'google-auth-library';
+import { google } from 'googleapis';
 
 const app = express();
 app.use(express.json()); // Enable JSON body parsing
@@ -26,64 +27,37 @@ const jwtClient = new JWT({
 
 app.post('/clear', async (req, res) => {
     try {
-        const { workplace_name, file_id, refresh_token, newestDateToClear } = req.body;
+        const { file_id, refresh_token, newestDateToClear } = req.body;
         oauthClient.credentials.refresh_token = refresh_token;
         let doc = new GoogleSpreadsheet(file_id, oauthClient);
-        let new_file_id; //incase we need to create a new one
-        try {
-            await doc.loadInfo();
-        } catch (error) {
-            if (error.message.includes("429")) // so that we don't create alot of sheets
-                return res.status(429).end();
-            doc = await create_spreadsheet(workplace_name);
-            new_file_id = doc.spreadsheetId;
-            return res.json({ new_file_id });
-        }
+        try { await doc.loadInfo() }
+        catch { return res.status(200).end() }
         let sheet = doc.sheetsByTitle["attendance log"];
-        if (!sheet) {
-            doc.addSheet({ title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
-            return res.json({ new_file_id });
-        }
+        if (!sheet) 
+            return res.status(200).end();
 
         const rows = await sheet.getRows();
-        const rowIndexToClear = [];
-        for (const [index, row] of rows.entries()) 
-            if (new Date(row.get('Date')) < new Date(newestDateToClear)) 
-                rowIndexToClear.push(index);
+        const indicesToDelete = [];
+        for (let i = rows.length - 1; i >= 0; i--) 
+            if (new Date(rows[i].get('Date')) < new Date(newestDateToClear)) 
+                indicesToDelete.push(i + 1); // to ignore the header
 
-        const batches = [];
-        let currentBatchStart = -1;
-        let currentBatchEnd = -1;
+        google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
+            spreadsheetId: file_id,
+            resource: {
+                requests: indicesToDelete.map(index => ({
+                    deleteDimension: {
+                        range: {
+                            sheetId: sheet.sheetId,
+                            dimension: 'ROWS',
+                            startIndex: index,
+                            endIndex: index + 1
+                        }
+                    }
+            }))}
+        });
 
-        for (let i = rowIndexToClear.length - 1; i >= 0; i--) {
-            if (currentBatchStart === -1) {
-                currentBatchStart = rowIndexToClear[i];
-                currentBatchEnd = rowIndexToClear[i];
-            }
-            // it's consecutive, so extend the batch's start
-            else if (rowIndexToClear[i] === currentBatchStart - 1) 
-                currentBatchStart = rowIndexToClear[i];
-            else { // Otherwise, the sequence is broken. Finalize the previous batch and start a new one.
-                batches.push({
-                    start: currentBatchStart,
-                    end: currentBatchEnd
-                });
-                // Start the new batch
-                currentBatchStart = rowIndexToClear[i];
-                currentBatchEnd = rowIndexToClear[i];
-            }
-        }
-        // After the loop, the last batch needs to be added
-        if (currentBatchStart !== -1) 
-            batches.push({
-                start: currentBatchStart,
-                end: currentBatchEnd
-            });
-
-        for (const batch of batches) 
-            sheet.clearRows({ start: batch.start + 2, end: batch.end + 2 });
-
-        res.json({ new_file_id });
+        res.status(200).end();
     } catch (error) {
         if (!error.message.includes("429"))
             console.error(error); //log if not generic 429 error
@@ -114,7 +88,7 @@ app.post('/append', async (req, res) => {
         }
 
         try { 
-            await sheet.addRows(rows) 
+            await sheet.addRows(rows);
         } catch (error) {
             // check if 429
             if (error.message.includes("429"))
