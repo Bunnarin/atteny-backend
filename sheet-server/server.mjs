@@ -36,26 +36,22 @@ app.post('/clear', async (req, res) => {
         if (!sheet) 
             return res.status(200).end();
 
-        const rows = await sheet.getRows();
-        const indicesToDelete = [];
+        const rows = await sheet.getRows(); //doesnt include header
+        // the assumption is that the row go from oldest to newest
+        // we delete the moment we find a row that is not older than newestDateToClear
+        const targetDate = new Date(newestDateToClear);
         for (let i = rows.length - 1; i >= 0; i--) 
-            if (new Date(rows[i].get('Date')) < new Date(newestDateToClear)) 
-                indicesToDelete.push(i + 1); // to ignore the header
-
-        google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
-            spreadsheetId: file_id,
-            resource: {
-                requests: indicesToDelete.map(index => ({
-                    deleteDimension: {
-                        range: {
-                            sheetId: sheet.sheetId,
-                            dimension: 'ROWS',
-                            startIndex: index,
-                            endIndex: index + 1
-                        }
-                    }
-            }))}
-        });
+            if (new Date(rows[i].get('Date')) <= targetDate) {
+                google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
+                    spreadsheetId: file_id,
+                    resource: { requests: { deleteDimension: { range: {
+                        sheetId: sheet.sheetId, 
+                        dimension: 'ROWS', 
+                        startIndex: 1, 
+                        endIndex: i + 1, 
+                    } } } } });
+                break;
+            }
 
         res.status(200).end();
     } catch (error) {
