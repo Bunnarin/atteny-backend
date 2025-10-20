@@ -44,12 +44,21 @@ app.post('/clear', async (req, res) => {
         if (new Date(lastRow.get('Date')) < targetDate) {
             google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
                 spreadsheetId: file_id,
-                resource: { requests: { deleteDimension: { range: {
-                    sheetId: sheet.sheetId, 
-                    dimension: 'ROWS', 
-                    startIndex: 1, //to avoid the header 
-                    endIndex: rows.length + 1, // rows is 0-based while the api is 1-based cuz we dont count the header
-                } } } } });
+                resource: { requests: [
+                    { insertDimension: { range: {
+                        sheetId: sheet.sheetId, 
+                        dimension: 'ROWS', 
+                        startIndex: rows.length + 1, 
+                        endIndex: rows.length + 1 + rows.length,
+                    } } },
+                    { deleteDimension: { range: {
+                        sheetId: sheet.sheetId, 
+                        dimension: 'ROWS', 
+                        startIndex: 1, //to avoid the header 
+                        endIndex: rows.length + 1, // rows is 0-based while the api is 1-based cuz we dont count the header
+                    } } },
+                ] } 
+            } );
             return res.status(200).end();
         }
 
@@ -59,12 +68,21 @@ app.post('/clear', async (req, res) => {
             if (new Date(rows[i].get('Date')) >= targetDate && rows[i].get('Tag') !== 'P') {
                 google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
                     spreadsheetId: file_id,
-                    resource: { requests: { deleteDimension: { range: {
-                        sheetId: sheet.sheetId, 
-                        dimension: 'ROWS', 
-                        startIndex: 1, //to avoid the header 
-                        endIndex: i + 1, // rows is 0-based while the api is 1-based cuz we dont count the header
-                    } } } } });
+                    resource: { requests: [
+                        { insertDimension: { range: {
+                            sheetId: sheet.sheetId, 
+                            dimension: 'ROWS', 
+                            startIndex: rows.length + 1, 
+                            endIndex: rows.length + 1 + i,
+                        } } },
+                        { deleteDimension: { range: {
+                            sheetId: sheet.sheetId, 
+                            dimension: 'ROWS', 
+                            startIndex: 1, //to avoid the header 
+                            endIndex: i + 1, // rows is 0-based while the api is 1-based cuz we dont count the header
+                        } } },
+                    ] } 
+                } );
                 break;
             }
 
@@ -79,7 +97,6 @@ app.post('/clear', async (req, res) => {
 app.post('/append', async (req, res) => {
     try {
         const { file_id, workplace_name, refresh_token, rows } = req.body;
-        console.log(refresh_token);
         oauthClient.credentials.refresh_token = refresh_token;
         let doc = new GoogleSpreadsheet(file_id, oauthClient);
         let new_file_id; //incase we need to create a new one
