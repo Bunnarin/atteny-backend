@@ -22,7 +22,7 @@ routerAdd("POST", "/payway/hash", e => {
     `).execute();
 }, $apis.requireAuth())
 
-routerAdd("GET", "/payway/webhook", e => {
+routerAdd("POST", "/payway/webhook", e => {
     const config = require(`${__hooks}/config.js`)
 
     // first we check if the tran_id exist in our database

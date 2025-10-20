@@ -13,7 +13,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         SELECT w.id, w.file_id, w.name, w.logs, u.refresh_token
         FROM workplace w
         LEFT JOIN users u ON w.employer = u.id
-        WHERE LENGTH(w.logs) > 2
+        WHERE w.logs IS NOT NULL
         ORDER BY LENGTH(w.logs) DESC
         LIMIT 15
     `).all(workplaces);
@@ -28,7 +28,7 @@ cronAdd("log_attendence", "* * * * *", () => {
             )
         );
     for (const workplace of workplaces) {
-        const rows = transformLogsToArray(JSON.parse(workplace.logs));
+        const rows = transformLogsToArray(JSON.parse(workplace.logs) || {});
         const res = $http.send({
             method: "POST",
             url: config.SHEET_SERVER_ENDPOINT() + "/append",
@@ -47,7 +47,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         // if it created a new spreadsheet, update the file_id
         if (res.json.new_file_id)
             record.set('file_id', res.json.new_file_id)
-        record.set("logs", "{}")
+        record.set("logs", "")
         $app.saveNoValidate(record)
     }
 })

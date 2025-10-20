@@ -34,13 +34,6 @@ onRecordAfterCreateSuccess((e) => {
     e.next()
 }, "users")
 
-// an interal endpoint that is only used to rm the refresh_token of an employee
-routerAdd("POST", "/rm-refresh-token", e => {
-    e.auth.set('refresh_token', null)
-    $app.saveNoValidate(e.auth)
-    e.json(200)
-}, $apis.requireAuth())
-
 // cleanup unverified user so that we don't have any non-belonging user
 // we don't need to check if they belong in any workplace (since it's stored in a json array anw)
 // if we did delete any user that is in the json_array, the next time the employer save the workplace, it will be recreated anw

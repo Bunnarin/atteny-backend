@@ -1,15 +1,8 @@
 routerAdd("POST", "/clockin/{id}", (e) => {
-    const config = require(`${__hooks}/config.js`);
     const { date, time, tag } = e.requestInfo().body;
     const name = e.auth.get('nickname') || e.auth.get('name');
-
     const workplace = $app.findRecordById('workplace', e.request.pathValue("id"));
-    $app.expandRecord(workplace, ["employer"]);
-    const employer = workplace.expandedOne('employer');
-    
-    // add to the workplace's log if no live mode
     const logs = JSON.parse(workplace.get('logs')) || {};
-    // init the logs if it doesn't exist
     logs[date] ??= {};
     logs[date][tag] ??= {};
     logs[date][tag][name] ??= [];
@@ -33,7 +26,7 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
     const rows = [];
     while (currentDate <= finalDate) {
         rows.push([
-            currentDate.toDateString(), 
+            currentDate.toLocaleDateString('en-CA'), 
             remark || "P",
             employee.get('nickname') || employee.get('name'), 
             "P"
@@ -42,11 +35,11 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
     }
     // push it one last time incase finalDate was null and we needed to include the final date anw
     rows.push([
-            currentDate.toDateString(), 
-            remark || "P",
-            employee.get('nickname') || employee.get('name'), 
-            "P"
-        ]);
+        currentDate.toLocaleDateString('en-CA'), 
+        remark || "P",
+        employee.get('nickname') || employee.get('name'), 
+        "P"
+    ]);
 
     const res = $http.send({
         method: "POST",
@@ -55,19 +48,25 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
         body: JSON.stringify({
             workplace_name: workplace.get('name'),
             file_id: workplace.get('file_id'),
-            refresh_token: e.auth.get('refresh_token'),
+            refresh_token: e.auth.get('credentials').sheet,
             rows,
         }),
     })
     if (res.statusCode != 200) 
         return e.json(res.statusCode)
-
+    if (res.json.new_file_id) {
+        workplace.set('file_id', res.json.new_file_id)
+        $app.saveNoValidate(workplace)
+    }
     return e.json(200)
 }, $apis.requireAuth())
 
 // when a user subscribes to a workplace (not added by the employer)
 routerAdd("POST", "/subscribe/{id}", (e) => {
-    const workplace = $app.findRecordById('workplace', e.request.pathValue("id"))
+    const workplace = $app.findRecordById('workplace', e.request.pathValue("id"));
+    if (!workplace)
+        return e.json(404);
+    
     if (workplace.get('employees').includes(e.auth.get('id')))
         return e.json(200, { "message": "already subscribed" })
 
