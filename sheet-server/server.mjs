@@ -39,16 +39,17 @@ app.post('/clear', async (req, res) => {
         const rows = await sheet.getRows(); //doesnt include header
         // the assumption is that the row go from oldest to newest
         // we delete the moment we find a row that is not older than newestDateToClear
+        // this logic sacrifice one of the targetDate for some reason
         const targetDate = new Date(newestDateToClear);
-        for (let i = rows.length - 1; i >= 0; i--) 
-            if (new Date(rows[i].get('Date')) <= targetDate) {
+        for (let i = 0; i < rows.length; i++) 
+            if (new Date(rows[i].get('Date')) > targetDate) {
                 google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
                     spreadsheetId: file_id,
                     resource: { requests: { deleteDimension: { range: {
                         sheetId: sheet.sheetId, 
                         dimension: 'ROWS', 
-                        startIndex: 1, 
-                        endIndex: i + 1, 
+                        startIndex: 1, //to avoid the header 
+                        endIndex: i + 1, // rows is 0-based while the api is 1-based cuz we dont count the header
                     } } } } });
                 break;
             }
