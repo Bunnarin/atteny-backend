@@ -22,7 +22,7 @@ const jwtClient = new JWT({
     scopes: [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive.file',
-        ],
+    ],
 });
 
 app.post('/clear', async (req, res) => {
@@ -54,8 +54,9 @@ app.post('/clear', async (req, res) => {
         }
 
         // we delete the moment we find a row that is older than newestDateToClear
+        // if it's a leave, then we run risk of it stopping our delete early
         for (let i = 0; i < rows.length; i++) 
-            if (new Date(rows[i].get('Date')) >= targetDate) {
+            if (new Date(rows[i].get('Date')) >= targetDate && rows[i].get('Tag') !== 'P') {
                 google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
                     spreadsheetId: file_id,
                     resource: { requests: { deleteDimension: { range: {

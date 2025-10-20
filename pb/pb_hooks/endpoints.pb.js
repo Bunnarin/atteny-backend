@@ -3,9 +3,8 @@ routerAdd("POST", "/clockin/{id}", (e) => {
     const name = e.auth.get('nickname') || e.auth.get('name');
     const workplace = $app.findRecordById('workplace', e.request.pathValue("id"));
     const logs = JSON.parse(workplace.get('logs')) || {};
-    logs[date] ??= {};
-    logs[date][tag] ??= {};
-    logs[date][tag][name] ??= [];
+    // magic line to create nested objects if they dont exist
+    (logs[date] ??= {})[tag] ??= {[name]: logs[date]?.[tag]?.[name] ?? []};
     logs[date][tag][name].push(time);
     workplace.set('logs', JSON.stringify(logs));
     $app.saveNoValidate(workplace);
@@ -13,51 +12,29 @@ routerAdd("POST", "/clockin/{id}", (e) => {
 }, $apis.requireAuth())
 
 routerAdd("POST", "/approve-leave/{workplace_id}", e => {
-    const config = require(`${__hooks}/config.js`);
     const { employee_id, remark, startDate, endDate } = e.requestInfo().body;
     const workplace = $app.findRecordById('workplace', e.request.pathValue("workplace_id"));
     // make sure that the auth is the employer
     if (workplace.get('employer') != e.auth.get('id'))
         return e.json(403)
     const employee = $app.findRecordById('users', employee_id);
+    const logs = JSON.parse(workplace.get('logs')) || {};
+    const name = employee.get('nickname') || employee.get('name');
 
     const currentDate = new Date(startDate);
     const finalDate = new Date(endDate);
-    const rows = [];
     while (currentDate < finalDate) {
-        rows.push([
-            currentDate.toLocaleDateString('en-CA'), 
-            remark || "P",
-            employee.get('nickname') || employee.get('name'), 
-            "P"
-        ]);
+        const date = currentDate.toLocaleDateString('en-CA');
+        (logs[date] ??= {})['P'] ??= {[name]: logs[date]?.['P']?.[name] ?? []};
+        logs[date]['P'][name].push(remark || 'P');
         currentDate.setDate(currentDate.getDate() + 1);
     }
     // push it one last time incase finalDate was null and we needed to include the final date anw
-    rows.push([
-        currentDate.toLocaleDateString('en-CA'), 
-        remark || "P",
-        employee.get('nickname') || employee.get('name'), 
-        "P"
-    ]);
-
-    const res = $http.send({
-        method: "POST",
-        url: config.SHEET_SERVER_ENDPOINT() + "/append",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            workplace_name: workplace.get('name'),
-            file_id: workplace.get('file_id'),
-            refresh_token: e.auth.get('refresh_token'),
-            rows,
-        }),
-    })
-    if (res.statusCode != 200) 
-        return e.json(res.statusCode)
-    if (res.json.new_file_id) {
-        workplace.set('file_id', res.json.new_file_id)
-        $app.saveNoValidate(workplace)
-    }
+    const date = currentDate.toLocaleDateString('en-CA');
+    (logs[date] ??= {})['P'] ??= {[name]: logs[date]?.['P']?.[name] ?? []};
+    logs[date]['P'][name].push(remark || 'P');
+    workplace.set('logs', JSON.stringify(logs));
+    $app.saveNoValidate(workplace);
     return e.json(200)
 }, $apis.requireAuth())
 

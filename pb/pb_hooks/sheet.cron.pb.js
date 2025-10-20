@@ -1,6 +1,6 @@
 // 20 write/mn (could up to 30, but I want to leave 10 write/mn to approve leave and delete)
 cronAdd("log_attendence", "* * * * *", () => {
-    const config = require(`${__hooks}/config.js`)
+    const config = require(`${__hooks}/config.js`);
     // get all the workplace where logs isn't empty, order by length
     const workplaces = arrayOf(new DynamicModel({
         "id": "",
@@ -13,10 +13,18 @@ cronAdd("log_attendence", "* * * * *", () => {
         SELECT w.id, w.file_id, w.name, w.logs, u.refresh_token
         FROM workplace w
         LEFT JOIN users u ON w.employer = u.id
-        WHERE w.logs IS NOT NULL
+        WHERE w.logs != ''
         ORDER BY LENGTH(w.logs) DESC
         LIMIT 20
     `).all(workplaces);
+
+    // do this to prevent another clockin to comes here and get overwritten while it's being executed (1mn)
+    if (workplaces.length)
+        $app.db().newQuery(`
+            UPDATE workplace
+            SET logs = ''
+            WHERE id IN ("${workplaces.map(w => w.id).join('", "')}")
+        `).execute();
 
     // helper
     const transformLogsToArray = (logs) => 
@@ -27,8 +35,9 @@ cronAdd("log_attendence", "* * * * *", () => {
                 )
             )
         );
-    for (const workplace of workplaces) {
-        const rows = transformLogsToArray(JSON.parse(workplace.logs) || {});
+
+    for (const [index, workplace] of workplaces.entries()) {
+        const rows = transformLogsToArray(JSON.parse(workplace.logs));
         const res = $http.send({
             method: "POST",
             url: config.SHEET_SERVER_ENDPOINT() + "/append",
@@ -40,14 +49,22 @@ cronAdd("log_attendence", "* * * * *", () => {
                 rows,
             }),
         })
-        if (res.statusCode == 429)
-            return;
+        if (res.statusCode != 200) { //restore the nulled logs
+            const workplacesToRestore = workplaces.slice(index);
+            const sqlCases = workplacesToRestore.map(w => `WHEN id = '${w.id}' THEN '${w.logs}'`).join(' ');
+            $app.db().newQuery(`
+                UPDATE workplace
+                SET logs = CASE
+                    ${sqlCases}
+                END
+            `).execute();
+            break;
+        }
 
-        const record = $app.findRecordById("workplace", workplace.id)
-        // if it created a new spreadsheet, update the file_id
-        if (res.json.new_file_id)
+        if (res.json.new_file_id) {
+            const record = $app.findRecordById("workplace", workplace.id)
             record.set('file_id', res.json.new_file_id)
-        record.set("logs", "")
-        $app.saveNoValidate(record)
+            $app.saveNoValidate(record)
+        }
     }
 })
