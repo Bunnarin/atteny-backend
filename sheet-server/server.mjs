@@ -42,7 +42,7 @@ app.post('/clear', async (req, res) => {
         // this logic sacrifice one of the targetDate for some reason
         const targetDate = new Date(newestDateToClear);
         for (let i = 0; i < rows.length; i++) 
-            if (new Date(rows[i].get('Date')) > targetDate) {
+            if (new Date(rows[i].get('Date')) >= targetDate) {
                 google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets.batchUpdate({
                     spreadsheetId: file_id,
                     resource: { requests: { deleteDimension: { range: {

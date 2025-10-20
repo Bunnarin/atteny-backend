@@ -24,7 +24,7 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
     const currentDate = new Date(startDate);
     const finalDate = new Date(endDate);
     const rows = [];
-    while (currentDate <= finalDate) {
+    while (currentDate < finalDate) {
         rows.push([
             currentDate.toLocaleDateString('en-CA'), 
             remark || "P",
@@ -48,7 +48,7 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
         body: JSON.stringify({
             workplace_name: workplace.get('name'),
             file_id: workplace.get('file_id'),
-            refresh_token: e.auth.get('credentials').sheet,
+            refresh_token: e.auth.get('refresh_token'),
             rows,
         }),
     })
