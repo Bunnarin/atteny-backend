@@ -1,4 +1,4 @@
-// 15 write every mn
+// 20 write/mn (could up to 30, but I want to leave 10 write/mn to approve leave and delete)
 cronAdd("log_attendence", "* * * * *", () => {
     const config = require(`${__hooks}/config.js`)
     // get all the workplace where logs isn't empty, order by length
@@ -15,7 +15,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         LEFT JOIN users u ON w.employer = u.id
         WHERE w.logs IS NOT NULL
         ORDER BY LENGTH(w.logs) DESC
-        LIMIT 15
+        LIMIT 20
     `).all(workplaces);
 
     // helper
