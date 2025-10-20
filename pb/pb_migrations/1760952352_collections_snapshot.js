@@ -676,20 +676,6 @@ migrate((app) => {
         {
           "autogeneratePattern": "",
           "hidden": false,
-          "id": "text4248517591",
-          "max": 0,
-          "min": 0,
-          "name": "refresh_token",
-          "pattern": "",
-          "presentable": false,
-          "primaryKey": false,
-          "required": false,
-          "system": false,
-          "type": "text"
-        },
-        {
-          "autogeneratePattern": "",
-          "hidden": false,
           "id": "text587191692",
           "max": 0,
           "min": 0,
@@ -734,6 +720,46 @@ migrate((app) => {
           "max": 255,
           "min": 0,
           "name": "nickname",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "number3686730371",
+          "max": null,
+          "min": null,
+          "name": "debt",
+          "onlyInt": false,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3343851925",
+          "max": 0,
+          "min": 0,
+          "name": "refresh_token",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text1361565684",
+          "max": 0,
+          "min": 0,
+          "name": "payway_token",
           "pattern": "",
           "presentable": false,
           "primaryKey": false,
@@ -882,20 +908,6 @@ migrate((app) => {
           "type": "text"
         },
         {
-          "autogeneratePattern": "",
-          "hidden": false,
-          "id": "text2479585644",
-          "max": 0,
-          "min": 0,
-          "name": "file_id",
-          "pattern": "",
-          "presentable": false,
-          "primaryKey": false,
-          "required": true,
-          "system": false,
-          "type": "text"
-        },
-        {
           "hidden": false,
           "id": "json1188605132",
           "maxSize": 0,
@@ -908,12 +920,26 @@ migrate((app) => {
         {
           "hidden": true,
           "id": "json4035954268",
-          "maxSize": 10,
+          "maxSize": 0,
           "name": "logs",
           "presentable": false,
           "required": false,
           "system": false,
           "type": "json"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2479585644",
+          "max": 0,
+          "min": 0,
+          "name": "file_id",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
         }
       ],
       "id": "pbc_3033560182",
@@ -926,7 +952,7 @@ migrate((app) => {
       "system": false,
       "type": "base",
       "updateRule": "@request.auth.id = employer.id",
-      "viewRule": null
+      "viewRule": "@request.auth.id = employer.id"
     },
     {
       "createRule": null,
