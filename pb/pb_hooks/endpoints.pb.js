@@ -25,6 +25,7 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
     const finalDate = new Date(endDate);
     while (currentDate < finalDate) {
         const date = currentDate.toLocaleDateString('en-CA');
+        // magic line to create nested objects if they dont exist
         (logs[date] ??= {})['P'] ??= {[name]: logs[date]?.['P']?.[name] ?? []};
         logs[date]['P'][name].push(remark || 'P');
         currentDate.setDate(currentDate.getDate() + 1);
@@ -33,6 +34,7 @@ routerAdd("POST", "/approve-leave/{workplace_id}", e => {
     const date = currentDate.toLocaleDateString('en-CA');
     (logs[date] ??= {})['P'] ??= {[name]: logs[date]?.['P']?.[name] ?? []};
     logs[date]['P'][name].push(remark || 'P');
+
     workplace.set('logs', JSON.stringify(logs));
     $app.saveNoValidate(workplace);
     return e.json(200)

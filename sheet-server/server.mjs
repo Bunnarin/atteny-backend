@@ -110,8 +110,8 @@ app.post('/append', async (req, res) => {
         }
 
         let sheet = doc.sheetsByTitle["attendance log"];
-        if (!sheet) {
-            sheet = await doc.addSheet({ title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
+        if (!sheet) { // we arent storing sheet id, 12...9 is our standard
+            sheet = await doc.addSheet({ sheetId: 123456789, title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
             await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
             create_dashboard(doc);
         }

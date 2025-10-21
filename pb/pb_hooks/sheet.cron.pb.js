@@ -1,4 +1,4 @@
-// 20 write/mn (could up to 30, but I want to leave 10 write/mn to approve leave and delete)
+// 20 write/mn (could up to 30, but I want to leave 10 write/mn to delete)
 cronAdd("log_attendence", "* * * * *", () => {
     const config = require(`${__hooks}/config.js`);
     // get all the workplace where logs isn't empty, order by length
