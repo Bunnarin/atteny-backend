@@ -47,13 +47,13 @@ routerAdd("POST", "/subscribe/{id}", (e) => {
         return e.json(404);
     
     if (workplace.get('employees').includes(e.auth.get('id')))
-        return e.json(200, { "message": "already subscribed" })
+        return e.json(200, { "message": "already subscribed" });
 
     // add the user to the workplace
-    workplace.set('employees+', e.auth.get('id'))
+    workplace.set('employees+', e.auth.get('id'));
     // the workplace onValidate will enforce the max_employee limit
-    $app.save(workplace)
-    return e.json(200)
+    $app.save(workplace);
+    return e.json(200);
 }, $apis.requireAuth())
 
 // endpoint to set the nickname of employees

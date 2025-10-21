@@ -1,4 +1,5 @@
 // 20 write/mn (could up to 30, but I want to leave 10 write/mn to delete)
+// if hit 30, then it'll timeout for 1mn
 cronAdd("log_attendence", "* * * * *", () => {
     const config = require(`${__hooks}/config.js`);
     // get all the workplace where logs isn't empty, order by length
@@ -52,12 +53,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         if (res.statusCode != 200) { //restore the nulled logs
             const workplacesToRestore = workplaces.slice(index);
             const sqlCases = workplacesToRestore.map(w => `WHEN id = '${w.id}' THEN '${w.logs}'`).join(' ');
-            $app.db().newQuery(`
-                UPDATE workplace
-                SET logs = CASE
-                    ${sqlCases}
-                END
-            `).execute();
+            $app.db().newQuery(`UPDATE workplace SET logs = CASE ${sqlCases} END`).execute();
             break;
         }
 

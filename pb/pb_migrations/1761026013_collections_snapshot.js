@@ -592,11 +592,11 @@ migrate((app) => {
       },
       "fields": [
         {
-          "autogeneratePattern": "[a-z0-9]{10}",
+          "autogeneratePattern": "",
           "hidden": false,
           "id": "text3208210256",
-          "max": 50,
-          "min": 5,
+          "max": 0,
+          "min": 0,
           "name": "id",
           "pattern": "$",
           "presentable": false,
@@ -754,18 +754,24 @@ migrate((app) => {
           "type": "text"
         },
         {
-          "autogeneratePattern": "",
           "hidden": false,
-          "id": "text1361565684",
-          "max": 0,
-          "min": 0,
-          "name": "payway_token",
-          "pattern": "",
+          "id": "json1336670595",
+          "maxSize": 0,
+          "name": "payment_methods",
           "presentable": false,
-          "primaryKey": false,
           "required": false,
           "system": false,
-          "type": "text"
+          "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "json4194641934",
+          "maxSize": 0,
+          "name": "credentials",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
         }
       ],
       "fileToken": {
@@ -833,13 +839,13 @@ migrate((app) => {
       "deleteRule": "@request.auth.id = employer.id",
       "fields": [
         {
-          "autogeneratePattern": "[a-z0-9]{15}",
+          "autogeneratePattern": "",
           "hidden": false,
           "id": "text3208210256",
-          "max": 15,
-          "min": 15,
+          "max": 0,
+          "min": 0,
           "name": "id",
-          "pattern": "^[a-z0-9]+$",
+          "pattern": "$",
           "presentable": false,
           "primaryKey": true,
           "required": true,
@@ -940,6 +946,16 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "json1053179562",
+          "maxSize": 0,
+          "name": "destination",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "json"
         }
       ],
       "id": "pbc_3033560182",

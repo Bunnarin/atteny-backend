@@ -29,7 +29,7 @@ onRecordCreate((e) => {
 // we check here because verified won't be populated until after creation
 onRecordAfterCreateSuccess((e) => {
     if (!e.record.get('verified'))
-        e.record.set('ip_address', Date.now().toString())
+        e.record.set('ip_address', Math.random().toString(36).substring(2, 7))
     $app.saveNoValidate(e.record)
     e.next()
 }, "users")

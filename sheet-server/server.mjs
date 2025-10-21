@@ -150,11 +150,8 @@ app.post('/create', async (req, res) => {
 async function create_spreadsheet(workplace_name) {
     const doc = await GoogleSpreadsheet.createNewSpreadsheetDocument(oauthClient, { title: workplace_name + " (created by Atteny)" });
     await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
-    // rename the default Sheet1
-    const defaultSheet = doc.sheetsByIndex[0];
-    await defaultSheet.updateProperties({ title: "attendance log" });
-    await defaultSheet.setHeaderRow(['Date', 'Time', 'Name', 'Tag']);
     create_dashboard(doc);
+    await doc.addSheet({ sheetId: 123456789, title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
     return doc;
 }
 
@@ -163,8 +160,8 @@ async function create_spreadsheet(workplace_name) {
 async function create_dashboard(doc) {
     const template_ss = new GoogleSpreadsheet(process.env.TEMPLATE_SS_ID, jwtClient);
     await template_ss.loadInfo();
-    template_ss.sheetsByIndex[0].copyToSpreadsheet(doc.spreadsheetId);
-    template_ss.sheetsByIndex[1].copyToSpreadsheet(doc.spreadsheetId);
+    template_ss.sheetsByTitle['attendance dashboard'].copyToSpreadsheet(doc.spreadsheetId);
+    template_ss.sheetsByTitle['tag dashboard'].copyToSpreadsheet(doc.spreadsheetId);
 }
 
 app.listen(3000, '127.0.0.1');
