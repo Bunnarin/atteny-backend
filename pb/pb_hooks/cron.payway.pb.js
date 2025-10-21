@@ -6,7 +6,7 @@ cronAdd("temp_payway", "* * * * *", () => {
         transaction.set('locked', true);
         $app.saveNoValidate(transaction);
         // read createdOn to ensure we only chekc 1mn after creation, if not 1mn yet, sleep until 1mn
-        const timeDiff = Date.now() - Number(transaction.get('id'));
+        const timeDiff = Date.now() - Number(transaction.get('id')) * 1000;
         if (timeDiff < 60 * 1000) 
             sleep(60 * 1000 - timeDiff);
         
@@ -28,6 +28,7 @@ cronAdd("temp_payway", "* * * * *", () => {
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(payload),
             })
+            console.log(JSON.stringify(res));
             if (res.json.data.payment_status == 'APPROVED') {
                 json = res.json;
                 break;
@@ -38,15 +39,9 @@ cronAdd("temp_payway", "* * * * *", () => {
         if (!json)
             return;
         // fullfillment
-        const live_mode = json.data.total_amount == config.get_live_mode_price();
         const user = $app.findRecordById("users", transaction.get('user'));
-        if (live_mode) {
-            user.set('paid_live_mode', true);
-            user.set('live_mode', true);
-        } else {
-            const quantity = json.data.total_amount / config.get_employee_price(user.get('test_group'))
-            user.set('max_employees', user.get('max_employees') + quantity)
-        }
+        const quantity = json.data.total_amount / config.get_license_price(user.get('test_group'))
+        user.set('max_employees', user.get('max_employees') + quantity)
         $app.saveNoValidate(user);
         // delete the transaction
         $app.delete(transaction);
