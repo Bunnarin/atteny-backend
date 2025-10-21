@@ -755,16 +755,6 @@ migrate((app) => {
         },
         {
           "hidden": false,
-          "id": "json1336670595",
-          "maxSize": 0,
-          "name": "payment_methods",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "json"
-        },
-        {
-          "hidden": false,
           "id": "json4194641934",
           "maxSize": 0,
           "name": "credentials",
@@ -1039,6 +1029,15 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "bool3939682449",
+          "name": "locked",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
         }
       ],
       "id": "pbc_1764142239",
@@ -1051,6 +1050,104 @@ migrate((app) => {
       "type": "base",
       "updateRule": null,
       "viewRule": null
+    },
+    {
+      "createRule": null,
+      "deleteRule": "@request.auth.id = user.id",
+      "fields": [
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text3208210256",
+          "max": 0,
+          "min": 0,
+          "name": "id",
+          "pattern": "$",
+          "presentable": false,
+          "primaryKey": true,
+          "required": true,
+          "system": true,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text2363381545",
+          "max": 0,
+          "min": 0,
+          "name": "type",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "autogeneratePattern": "",
+          "hidden": false,
+          "id": "text812977739",
+          "max": 0,
+          "min": 0,
+          "name": "source_of_fund",
+          "pattern": "",
+          "presentable": false,
+          "primaryKey": false,
+          "required": false,
+          "system": false,
+          "type": "text"
+        },
+        {
+          "hidden": false,
+          "id": "date4098502798",
+          "max": "",
+          "min": "",
+          "name": "expiration_date",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
+        },
+        {
+          "cascadeDelete": false,
+          "collectionId": "_pb_users_auth_",
+          "hidden": false,
+          "id": "relation2375276105",
+          "maxSelect": 1,
+          "minSelect": 0,
+          "name": "user",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "relation"
+        },
+        {
+          "hidden": false,
+          "id": "bool3814588639",
+          "name": "default",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        },
+        {
+          "hidden": false,
+          "id": "bool1692280613",
+          "name": "frozen",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "bool"
+        }
+      ],
+      "id": "pbc_1552602209",
+      "indexes": [],
+      "listRule": "@request.auth.id = user.id",
+      "name": "payment_method",
+      "system": false,
+      "type": "base",
+      "updateRule": "@request.auth.id = user.id",
+      "viewRule": "@request.auth.id = user.id"
     }
   ];
 

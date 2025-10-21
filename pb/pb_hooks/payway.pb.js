@@ -22,7 +22,7 @@ routerAdd("POST", "/payway/hash", e => {
     `).execute();
 }, $apis.requireAuth())
 
-routerAdd("POST", "/payway/webhook", e => {
+routerAdd("POST", "/payway/webhook/buy", e => {
     const config = require(`${__hooks}/config.js`)
 
     // first we check if the tran_id exist in our database
@@ -60,3 +60,52 @@ routerAdd("POST", "/payway/webhook", e => {
     $app.delete(transaction);
     return e.json(200);
 }, $apis.requireAuth())
+
+// payway will call this after link card or aba
+routerAdd("POST", "/payway/webhook/link", e => {
+    const { request_id, payment_credential } = e.requestInfo().body;
+    if (payment_credential.status == 0)  // aba token is removed by user
+        $app.db().newQuery(`
+            DELETE FROM payment_method WHERE id = {:id}
+        `).bind({id: payment_credential.pwt}).execute();
+    else if (payment_credential.status == 1) // token is active
+        $app.db().newQuery(`
+            INSERT INTO payment_method (id, user, type, source_of_fund, expiration_date)
+            VALUES ({:id}, {:user}, {:type}, {:source_of_fund}, {:expiration_date});
+            DELETE FROM pending_transaction WHERE id = {:request_id};
+        `).bind({
+            id: payment_credential.pwt,
+            user: payment_credential.ctid,
+            type: payment_credential.type,
+            expiration_date: payment_credential.expired_at,
+            source_of_fund: payment_credential.source_of_fund.slice(-4), //payway only return last 4
+            request_id,
+        }).execute();
+    else if (payment_credential.status == 2) // aba token is frozen
+        $app.db().newQuery(`
+            UPDATE payment_method SET frozen = TRUE WHERE id = {:id}
+        `).bind({id: payment_credential.pwt}).execute();
+    return e.json(200);
+})
+
+// when user delete from the frontend
+onRecordAfterDeleteSuccess((e) => {
+    const config = require(`${__hooks}/config.js`);
+    const formData = {
+        request_time: Math.floor(Date.now() / 1000),
+        merchant_id: config.PAYWAY_MERCHANT_ID(),
+        ctid: e.record.get('user'),
+        pwt: e.record.get('id'),
+    }
+    const hashStr = formData.merchant_id + formData.ctid + formData.request_time + formData.pwt;
+    const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY());
+    formData.hash = Buffer.from(hashedStr, 'hex').toString('base64');
+    $http.send({
+        method: "POST",
+        url: config.PAYWAY_ENDPOINT() + "/api/payment-credential/v3/token-management/remove-token",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(formData),
+        redirect: 'follow',
+    });
+    e.next();
+}, 'payment_method')
