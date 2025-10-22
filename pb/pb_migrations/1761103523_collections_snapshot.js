@@ -946,6 +946,18 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "number1806004068",
+          "max": 12,
+          "min": 0,
+          "name": "last_paid",
+          "onlyInt": true,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
         }
       ],
       "id": "pbc_3033560182",
@@ -980,9 +992,9 @@ migrate((app) => {
         },
         {
           "hidden": false,
-          "id": "json106610454",
+          "id": "json494360628",
           "maxSize": 1,
-          "name": "total_employees",
+          "name": "value",
           "presentable": false,
           "required": false,
           "system": false,
@@ -996,7 +1008,7 @@ migrate((app) => {
       "system": false,
       "type": "view",
       "updateRule": null,
-      "viewQuery": "SELECT \n    users.id, \n    COALESCE(SUM(JSON_ARRAY_LENGTH(workplace.employees)), 0) as total_employees\nFROM users\nLEFT JOIN workplace ON users.id = workplace.employer\nGROUP BY users.id;",
+      "viewQuery": "SELECT \n    users.id, \n    COALESCE(SUM(JSON_ARRAY_LENGTH(workplace.employees)), 0) as value\nFROM users\nLEFT JOIN workplace ON users.id = workplace.employer\nGROUP BY users.id;",
       "viewRule": "@request.auth.id = id"
     },
     {
@@ -1079,7 +1091,7 @@ migrate((app) => {
           "pattern": "",
           "presentable": false,
           "primaryKey": false,
-          "required": false,
+          "required": true,
           "system": false,
           "type": "text"
         },
@@ -1093,7 +1105,7 @@ migrate((app) => {
           "pattern": "",
           "presentable": false,
           "primaryKey": false,
-          "required": false,
+          "required": true,
           "system": false,
           "type": "text"
         },
@@ -1104,7 +1116,7 @@ migrate((app) => {
           "min": "",
           "name": "expiration_date",
           "presentable": false,
-          "required": false,
+          "required": true,
           "system": false,
           "type": "date"
         },
@@ -1117,7 +1129,7 @@ migrate((app) => {
           "minSelect": 0,
           "name": "user",
           "presentable": false,
-          "required": false,
+          "required": true,
           "system": false,
           "type": "relation"
         },
@@ -1125,15 +1137,6 @@ migrate((app) => {
           "hidden": false,
           "id": "bool3814588639",
           "name": "default",
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "bool"
-        },
-        {
-          "hidden": false,
-          "id": "bool1692280613",
-          "name": "frozen",
           "presentable": false,
           "required": false,
           "system": false,

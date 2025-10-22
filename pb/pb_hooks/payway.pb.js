@@ -3,6 +3,7 @@ routerAdd("GET", "/payway/params", (e) => {
     const config = require(`${__hooks}/config.js`)
     return e.json(200, { 
         license_price: config.get_license_price(e.auth.get('test_group')),
+        rent_price: config.get_rent_price(e.auth.get('test_group')),
         merchant_id: config.PAYWAY_MERCHANT_ID()
     })
 }, $apis.requireAuth())
@@ -61,32 +62,40 @@ routerAdd("POST", "/payway/webhook/buy", e => {
     return e.json(200);
 }, $apis.requireAuth())
 
-// payway will call this after link card or aba
+// payway will call this after link card or aba (this is also the pushback)
 routerAdd("POST", "/payway/webhook/link", e => {
     const { request_id, payment_credential } = e.requestInfo().body;
-    if (payment_credential.status == 0)  // aba token is removed by user
-        $app.db().newQuery(`
-            DELETE FROM payment_method WHERE id = {:id}
-        `).bind({id: payment_credential.pwt}).execute();
-    else if (payment_credential.status == 1) // token is active
+    if (payment_credential.status == 1) // token is active / unfrozen
         $app.db().newQuery(`
             INSERT INTO payment_method (id, user, type, source_of_fund, expiration_date)
-            VALUES ({:id}, {:user}, {:type}, {:source_of_fund}, {:expiration_date});
+            VALUES ({:id}, {:user}, {:type}, {:source_of_fund}, {:expiration_date})
+            ON CONFLICT(id) DO UPDATE SET frozen = FALSE;
+
             DELETE FROM pending_transaction WHERE id = {:request_id};
         `).bind({
             id: payment_credential.pwt,
             user: payment_credential.ctid,
-            type: payment_credential.type,
+            type: payment_credential.type.toLowerCase(),
             expiration_date: payment_credential.expired_at,
             source_of_fund: payment_credential.source_of_fund.slice(-4), //payway only return last 4
             request_id,
         }).execute();
-    else if (payment_credential.status == 2) // aba token is frozen
+    else // aba token is removed / frozen
         $app.db().newQuery(`
-            UPDATE payment_method SET frozen = TRUE WHERE id = {:id}
+            DELETE FROM payment_method WHERE id = {:id}
         `).bind({id: payment_credential.pwt}).execute();
     return e.json(200);
 })
+
+// if default is true, update all other records to false
+onRecordAfterUpdateSuccess((e) => {
+    if (e.record.get('default')) 
+        $app.db().newQuery(`
+            UPDATE payment_method SET "default" = FALSE 
+            WHERE user = '${e.record.get('user')}' AND id != '${e.record.get('id')}'
+        `).execute();
+    e.next();
+}, 'payment_method')
 
 // when user delete from the frontend
 onRecordAfterDeleteSuccess((e) => {

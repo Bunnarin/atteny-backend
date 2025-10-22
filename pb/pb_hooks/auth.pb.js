@@ -34,10 +34,3 @@ onRecordAfterCreateSuccess((e) => {
     e.next()
 }, "users")
 
-// cleanup unverified user so that we don't have any non-belonging user
-// we don't need to check if they belong in any workplace (since it's stored in a json array anw)
-// if we did delete any user that is in the json_array, the next time the employer save the workplace, it will be recreated anw
-cronAdd("cleanup_unverified_users", "@daily", () => {
-    $app.db().newQuery(`DELETE FROM users WHERE verified = false`).execute()
-})
-
