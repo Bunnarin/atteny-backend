@@ -7,8 +7,8 @@ onRecordValidate((e) => {
     const employees_changed = e.record.get('employees') != e.record.original().get('employees')
     if (employees_changed) {
         // if no payment_methods, we check
-        const payment_method = $app.findFirstRecordByData("payment_method", 'user', employer.get('id'));
-        if (!payment_method) {
+        const payment_method_num = $app.countRecords("payment_method", $dbx.hashExp({"user": employer.get('id')}));
+        if (!payment_method_num) {
             const total_employees = $app.findRecordById("total_employees", employer.get('id')).get('value')
             const free_spots = employer.get('max_employees') - total_employees
             const diff = e.record.get('employees').length - e.record.original().get('employees').length
