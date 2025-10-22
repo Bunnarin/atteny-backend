@@ -6,11 +6,15 @@ onRecordValidate((e) => {
     // paywall if the user doesnt have linked card
     const employees_changed = e.record.get('employees') != e.record.original().get('employees')
     if (employees_changed) {
-        const total_employees = $app.findRecordById("total_employees", employer.get('id')).get('value')
-        const free_spots = employer.get('max_employees') - total_employees
-        const diff = e.record.get('employees').length - e.record.original().get('employees').length
-        if (diff > free_spots)
-            e.json(400) // this doesnt actually throws the error back to the /subscribe but it doesn throws an internal error
+        // if no payment_methods, we check
+        const payment_method = $app.findFirstRecordByData("payment_method", 'user', employer.get('id'));
+        if (!payment_method) {
+            const total_employees = $app.findRecordById("total_employees", employer.get('id')).get('value')
+            const free_spots = employer.get('max_employees') - total_employees
+            const diff = e.record.get('employees').length - e.record.original().get('employees').length
+            if (diff > free_spots)
+                e.json(400) // this doesnt actually throws the error back to the /subscribe but it doesn throws an internal error
+        }
 
         // now we get_or_create employees
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

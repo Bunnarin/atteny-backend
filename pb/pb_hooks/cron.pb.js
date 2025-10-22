@@ -69,28 +69,27 @@ cronAdd("collect_rent", "@monthly", () => {
         "id": "",
         "test_group": 0,
         "quantity": 0,
-        "payway_methods": [],
+        "payway_tokens": [],
     }));
     $app.db().newQuery(`
         SELECT 
             u.id, 
             u.test_group, 
             (te.value - u.max_employees) as quantity,
-            json_group_array(json_object('id', pm.id)) as payway_methods
+            json_group_array(pm.id) as payway_tokens
         FROM users u
         JOIN total_employees te ON u.id = te.id
-        LEFT JOIN payment_method pm ON u.id = pm.user
-        WHERE te.value > u.max_employees
+        LEFT JOIN payment_method pm ON u.id = pm.user ORDER BY pm.default DESC
+        WHERE u.last_paid != ${new Date().getMonth() + 1} AND te.value > u.max_employees
         GROUP BY u.id, u.test_group, te.value, u.max_employees
     `).all(users);
 
     users.forEach(user => {
-        return console.log(JSON.stringify(user.payway_methods));
-        let amount = user.quantity * config.get_rent_price(user.test_group);
+        const amount = user.quantity * config.get_rent_price(user.test_group);
         const formData = {
             request_time: Math.floor(Date.now() / 1000),
             tran_id: Date.now(),
-            pwt: user.payway_token,
+            pwt: user.payway_tokens[0],
             merchant_id: config.PAYWAY_MERCHANT_ID(),
             ctid: user.id,
             email: user.id,
@@ -108,8 +107,10 @@ cronAdd("collect_rent", "@monthly", () => {
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify(formData),
         })
-        if (json.status.code == '00')
-            return
+        if (json.status.code == '00') // set that they already paid this month
+            return $app.db().newQuery(`
+                    UPDATE users SET last_paid = ${new Date().getMonth() + 1} WHERE id = '${user.id}'
+                `).execute();
         
         // remove their payway_token
         const user_record = $app.findRecordById("users", user.id)

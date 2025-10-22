@@ -762,6 +762,18 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "json"
+        },
+        {
+          "hidden": false,
+          "id": "number1806004068",
+          "max": 12,
+          "min": 0,
+          "name": "last_paid",
+          "onlyInt": true,
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "number"
         }
       ],
       "fileToken": {
@@ -946,18 +958,6 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "json"
-        },
-        {
-          "hidden": false,
-          "id": "number1806004068",
-          "max": 12,
-          "min": 0,
-          "name": "last_paid",
-          "onlyInt": true,
-          "presentable": false,
-          "required": false,
-          "system": false,
-          "type": "number"
         }
       ],
       "id": "pbc_3033560182",
