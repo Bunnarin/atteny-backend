@@ -1,6 +1,6 @@
-// cleanup unverified user so that we don't have any non-belonging user
+// cleanup unverified user so that we don't have any non-belonging user (in case user mispelled email)
 // we don't need to check if they belong in any workplace (since it's stored in a json array anw)
-// if we did delete any user that is in the json_array, the next time the employer save the workplace, it will be recreated anw
+// if we did delete any user that is in a workplace, the next time the employer save the workplace, it will be recreated anw
 cronAdd("cleanup_unverified_users", "@daily", () => {
     $app.db().newQuery(`DELETE FROM users WHERE verified = false`).execute()
 })
@@ -20,7 +20,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         SELECT w.id, w.file_id, w.name, w.logs, u.refresh_token
         FROM workplace w
         LEFT JOIN users u ON w.employer = u.id
-        WHERE w.logs != ''
+        WHERE w.logs != '' AND w.file_id != ''
         ORDER BY LENGTH(w.logs) DESC
         LIMIT 20
     `).all(workplaces);
@@ -62,9 +62,10 @@ cronAdd("log_attendence", "* * * * *", () => {
     }
 })
 
-// cron job to collect rent
-cronAdd("collect_rent", "@monthly", () => {
-    const config = require(`${__hooks}/config.js`)
+// 100/hour => 72000 max subscription customer
+cronAdd("collect_rent", "@hourly", () => { 
+    const config = require(`${__hooks}/config.js`);
+    const thisMonth = new Date().getMonth() + 1;
     const users = arrayOf(new DynamicModel({
         "id": "",
         "test_group": 0,
@@ -72,74 +73,78 @@ cronAdd("collect_rent", "@monthly", () => {
         "payway_tokens": [],
     }));
     $app.db().newQuery(`
-        SELECT 
-            u.id, 
-            u.test_group, 
-            (te.value - u.max_employees) as quantity,
-            json_group_array(pm.id) as payway_tokens
+        SELECT u.id, u.test_group, (te.value - u.max_employees) as quantity, json_group_array(pm.id) as payway_tokens
         FROM users u
         JOIN total_employees te ON u.id = te.id
-        LEFT JOIN payment_method pm ON u.id = pm.user ORDER BY pm.default DESC
-        WHERE u.last_paid != ${new Date().getMonth() + 1} AND te.value > u.max_employees
+        LEFT JOIN payment_method pm ON u.id = pm.user
+        WHERE u.last_paid != ${thisMonth} AND te.value > u.max_employees
         GROUP BY u.id, u.test_group, te.value, u.max_employees
+        ORDER BY pm."default" DESC
+        LIMIT 100
     `).all(users);
 
     users.forEach(user => {
         const amount = user.quantity * config.get_rent_price(user.test_group);
-        const formData = {
-            request_time: Math.floor(Date.now() / 1000),
-            tran_id: Date.now(),
-            pwt: user.payway_tokens[0],
-            merchant_id: config.PAYWAY_MERCHANT_ID(),
-            ctid: user.id,
-            email: user.id,
-            token_flag: 'MITR_FIX',
-            currency: 'USD',
-            amount,
+        for (const pwt of user.payway_tokens) {
+            const formData = {
+                request_time: Math.floor(Date.now() / 1000),
+                tran_id: Date.now(),
+                pwt,
+                merchant_id: config.PAYWAY_MERCHANT_ID(),
+                ctid: user.id,
+                token_flag: 'MITR_FIX',
+                currency: 'USD',
+                amount,
+            }
+            const hashKey = ['request_time', 'merchant_id', 'tran_id', 'amount', 'currency', 'ctid', 'pwt', 'token_flag'];
+            const hashStr = hashKey.map(key => formData[key]).join('');
+            const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY());
+            formData.hash = Buffer.from(hashedStr, 'hex').toString('base64');
+            const { json } = $http.send({
+                method: "POST",
+                url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v3/purchase/payment-credential",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(formData),
+            })
+            if (json.status.code == '00') // set that they already paid this month
+                return $app.db().newQuery(`UPDATE users SET last_paid = ${thisMonth} WHERE id = '${user.id}'`).execute();
+            else
+                $app.db().newQuery(`DELETE FROM payment_method WHERE id = '${pwt}'`).execute();
+            // if payment failed it'll try other token until run out => out of the loop penalty
         }
-        const hashKey = ['request_time', 'merchant_id', 'tran_id', 'amount', 'currency', 'ctid', 'pwt', 'email', 'token_flag'];
-        const hashStr = hashKey.map(key => formData[key]).join('');
-        const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY());
-        formData.hash = Buffer.from(hashedStr, 'hex').toString('base64');
-        const { json } = $http.send({
-            method: "POST",
-            url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v3/purchase/payment-credential",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(formData),
-        })
-        if (json.status.code == '00') // set that they already paid this month
-            return $app.db().newQuery(`
-                    UPDATE users SET last_paid = ${new Date().getMonth() + 1} WHERE id = '${user.id}'
-                `).execute();
         
-        // remove their payway_token
-        const user_record = $app.findRecordById("users", user.id)
-        user_record.set('payway_token', null)
-        user_record.set('debt', user_record.get("debt") + amount)
-        $app.saveNoValidate(user_record)
+        // add debt if all failed
+        $app.db().newQuery(`UPDATE users SET debt = debt + ${amount} WHERE id = '${user.id}'`).execute();
 
-        // if failed, remove the quantity number of random employees from a random workplace
-        const workplaces = $app.findRecordsByFilter("workplace", `employer='${user.id}'`)
-        let numLeft = user.quantity
-        workplaces.forEach(workplace => {
-            const employees = workplace.get("employees")
-            const numToRemove = Math.min(employees.length, numLeft)
-            workplace.set('employees', employees.splice(0, numToRemove))
-            $app.saveNoValidate(workplace)
-            numLeft -= numToRemove
-        })
+        // remove the quantity number of random employees from random workplaces
+        const workplaces = $app.findRecordsByFilter("workplace", `employer='${user.id}'`);
+        let numLeft = user.quantity;
+        while (numLeft > 0) {
+            // get the workplace with the highest number of employees
+            const [ workplace ] = workplaces.sort((a, b) => b.get("employees").length - a.get("employees").length);
+            const employees = workplace.get("employees");
+            const numToRemove = Math.min(employees.length, numLeft);
+            workplace.set('employees', employees.slice(numToRemove));
+            $app.saveNoValidate(workplace);
+            numLeft -= numToRemove;
+        }
+
         // notify them
-        const message = new MailerMessage({
-            from: {
-                address: $app.settings().meta.senderAddress,
-                name:    $app.settings().meta.senderName,
-            },
-            to:      [{address: user.email}],
+        $app.newMailClient().send(new MailerMessage({
+            to: [{address: user.id}],
             subject: "Payment Failed",
-            html:    `You owe us ${amount} USD. So, we have decided to randomly remove ${user.quantity} employees from a random workplace.`,
-        })
-        $app.newMailClient().send(message)
+            html: `You owe us ${amount} USD. 
+            So, we have decided to randomly remove ${user.quantity} employees from a random workplace.
+            Please set new payment methods to add more employees`,
+        }))
     })
+})
+
+// 7 day old
+cronAdd("cleanup_old_transaction", "@weekly", () => {
+    $app.db().newQuery(`
+        DELETE FROM pending_transaction WHERE id < (strftime('%s', 'now') - 604800) * 1000
+    `).execute();
 })
 
 // fking cronjob

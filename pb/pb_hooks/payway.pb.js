@@ -37,25 +37,25 @@ routerAdd("POST", "/payway/webhook/buy", e => {
         merchant_id: config.PAYWAY_MERCHANT_ID(),
         tran_id: transaction.get('id'),
     }
-    const hashStr = payload.req_time + payload.merchant_id + payload.tran_id
-    const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY())
-    payload.hash = Buffer.from(hashedStr, 'hex').toString('base64')
+    const hashStr = payload.req_time + payload.merchant_id + payload.tran_id;
+    const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY());
+    payload.hash = Buffer.from(hashedStr, 'hex').toString('base64');
     const { json } = $http.send({
         method: "POST",
         url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v1/payments/check-transaction-2",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(payload),
     })
-    if (json.data.payment_status == 'DECLINED') {
+    if (json.data.payment_status != 'APPROVED' && json.data.payment_status != 'PENDING') {
         $app.delete(transaction);
-        return e.json(400, { "error": "invalid transaction" })
+        return e.json(400, { "error": "invalid transaction" });
     }
-    if (json.data.payment_status != 'APPROVED')
-        return e.json(400, { "error": "invalid transaction" })
+    else if (json.data.payment_status != 'APPROVED')
+        return e.json(400, { "error": "invalid transaction" });
 
     // fullfillment
-    const quantity = json.data.total_amount / config.get_license_price(e.auth.get('test_group'))
-    e.auth.set('max_employees', e.auth.get('max_employees') + quantity)
+    const quantity = json.data.total_amount / config.get_license_price(e.auth.get('test_group'));
+    e.auth.set('max_employees', e.auth.get('max_employees') + quantity);
     $app.saveNoValidate(e.auth);
     // delete the transaction
     $app.delete(transaction);
@@ -64,26 +64,48 @@ routerAdd("POST", "/payway/webhook/buy", e => {
 
 // payway will call this after link card or aba (this is also the pushback)
 routerAdd("POST", "/payway/webhook/link", e => {
-    const { request_id, payment_credential } = e.requestInfo().body;
-    if (payment_credential.status == 1) // token is active / unfrozen
+    const config = require(`${__hooks}/config.js`);
+    const { request_id, payment_credential: data } = e.requestInfo().body;
+    if (data.status == 1) { // token is active / unfrozen
+        $app.db().newQuery(`DELETE FROM pending_transaction WHERE id = {:id}`).bind({id: request_id}).execute();
+        // first we attempt to collect our debt first
+        const formData = {
+            request_time: Math.floor(Date.now() / 1000),
+            tran_id: Date.now(),
+            pwt: data.pwt,
+            merchant_id: config.PAYWAY_MERCHANT_ID(),
+            ctid: data.ctid,
+            token_flag: 'MITR_FIX',
+            currency: 'USD',
+            amount: $app.findRecordById('users', data.ctid).get('debt'),
+        }
+        const hashKey = ['request_time', 'merchant_id', 'tran_id', 'amount', 'currency', 'ctid', 'pwt', 'token_flag'];
+        const hashStr = hashKey.map(key => formData[key]).join('');
+        const hashedStr = $security.hs512(hashStr, config.PAYWAY_KEY());
+        formData.hash = Buffer.from(hashedStr, 'hex').toString('base64');
+        const { json } = $http.send({
+            method: "POST",
+            url: config.PAYWAY_ENDPOINT() + "/api/payment-gateway/v3/purchase/payment-credential",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(formData),
+        })
+        if (json.status.code != '00') // no adding the payment method
+            return e.json(400, { "error": "invalid transaction" });
+        
         $app.db().newQuery(`
             INSERT INTO payment_method (id, user, type, source_of_fund, expiration_date)
             VALUES ({:id}, {:user}, {:type}, {:source_of_fund}, {:expiration_date})
-            ON CONFLICT(id) DO UPDATE SET frozen = FALSE;
-
-            DELETE FROM pending_transaction WHERE id = {:request_id};
+            ON CONFLICT(id) DO UPDATE SET frozen = FALSE
         `).bind({
-            id: payment_credential.pwt,
-            user: payment_credential.ctid,
-            type: payment_credential.type.toLowerCase(),
-            expiration_date: payment_credential.expired_at,
-            source_of_fund: payment_credential.source_of_fund.slice(-4), //payway only return last 4
-            request_id,
+            id: data.pwt,
+            user: data.ctid,
+            type: data.type.toLowerCase(),
+            expiration_date: data.expired_at.replace("T", " ") + "Z",
+            source_of_fund: data.source_of_fund.slice(-4), //payway only return last 4
         }).execute();
+    }
     else // aba token is removed / frozen
-        $app.db().newQuery(`
-            DELETE FROM payment_method WHERE id = {:id}
-        `).bind({id: payment_credential.pwt}).execute();
+        $app.db().newQuery(`DELETE FROM payment_method WHERE id = {:id}`).bind({id: data.pwt}).execute();
     return e.json(200);
 })
 
