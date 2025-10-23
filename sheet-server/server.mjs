@@ -89,48 +89,43 @@ app.post('/clear', async (req, res) => {
         res.status(200).end();
     } catch (error) {
         if (!error.message.includes("429"))
-            console.error(error); //log if not generic 429 error
+             console.error(error.message); //log if not generic 429 error
         res.status(429).end();
     }
 });
 
 app.post('/append', async (req, res) => {
-    try {
-        const { file_id, workplace_name, refresh_token, rows } = req.body;
-        oauthClient.credentials.refresh_token = refresh_token;
-        let doc = new GoogleSpreadsheet(file_id, oauthClient);
-        let new_file_id; //incase we need to create a new one
-        try {
-            await doc.loadInfo();
-        } catch (error) {
-            if (error.message.includes("429")) // so that we don't create alot of sheets
-                return res.status(429).end();
-            doc = await create_spreadsheet(workplace_name);
-            new_file_id = doc.spreadsheetId;
-        }
+    const { file_id, workplace_name, refresh_token, rows } = req.body;
+    oauthClient.credentials.refresh_token = refresh_token;
 
-        let sheet = doc.sheetsByTitle["attendance log"];
-        if (!sheet) { // we arent storing sheet id, 12...9 is our standard
-            sheet = await doc.addSheet({ sheetId: 123456789, title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
+    try { // we append in one go by default to not call the read api if we use the GoogleSpreadsheet lib
+        const sheets = google.sheets({ version: 'v4', auth: oauthClient }).spreadsheets;
+        await sheets.values.append({
+            spreadsheetId: file_id,
+            range: 'attendance log!A:A',
+            valueInputOption: 'RAW',
+            resource: { values: rows },
+        });
+        res.status(200).end();
+    } catch ({message}) {
+        if (message.includes('429')) 
+            return res.status(429).end();
+        else if (message.includes('Unable to parse range')) {
+            const doc = new GoogleSpreadsheet(file_id, oauthClient);
+            const sheet = await doc.addSheet({title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag']});
+            sheet.addRows(rows);
             await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
             create_dashboard(doc);
+            return res.status(200).end();
         }
-
-        try { 
+        else if (message.includes('Requested entity was not found')) {
+            const doc = await create_spreadsheet(workplace_name);
+            const sheet = doc.sheetsByTitle["attendance log"];
             await sheet.addRows(rows);
-        } catch (error) {
-            // check if 429
-            if (error.message.includes("429"))
-                return res.status(429).end();
-            // the error is no header row
-            await sheet.setHeaderRow(['Date', 'Time', 'Name', 'Tag']);
-            sheet.addRows(rows);
+            return res.json({newFileId: doc.spreadsheetId});
         }
-        res.json({ new_file_id });
-    } catch (error) {
-        if (!error.message.includes("429"))
-            console.error(error); //log if not generic 429 error
-        res.status(429).end();
+        console.log(message); // if not 429
+        return res.status(429).end(); //throw 429 anyway
     }
 });
 
@@ -151,6 +146,7 @@ async function create_spreadsheet(workplace_name) {
     const doc = await GoogleSpreadsheet.createNewSpreadsheetDocument(oauthClient, { title: workplace_name + " (created by Atteny)" });
     await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
     create_dashboard(doc);
+    // the sheetId doesnt matter much but it will be useful if I ever need to identify sheet by id in the future
     await doc.addSheet({ sheetId: 123456789, title: "attendance log", headerValues: ['Date', 'Time', 'Name', 'Tag'] });
     return doc;
 }

@@ -5,8 +5,7 @@ cronAdd("cleanup_unverified_users", "@daily", () => {
     $app.db().newQuery(`DELETE FROM users WHERE verified = false`).execute()
 })
 
-// 20 write/mn (could up to 30, but I want to leave 10 write/mn to delete)
-// if hit 30, then it'll timeout for 1mn
+// max = 77/30s before timeout for another 30s => 60/mn
 cronAdd("log_attendence", "* * * * *", () => {
     const config = require(`${__hooks}/config.js`);
     const workplaces = arrayOf(new DynamicModel({
@@ -22,7 +21,7 @@ cronAdd("log_attendence", "* * * * *", () => {
         LEFT JOIN users u ON w.employer = u.id
         WHERE w.logs != '' AND w.file_id != ''
         ORDER BY LENGTH(w.logs) DESC
-        LIMIT 20
+        LIMIT 60
     `).all(workplaces);
 
     // do this to prevent another clockin to comes here and get overwritten while it's being executed (1mn)
@@ -40,7 +39,7 @@ cronAdd("log_attendence", "* * * * *", () => {
                 )
             )
         );
-
+        
     for (const [index, workplace] of workplaces.entries()) {
         const res = $http.send({
             method: "POST",
@@ -59,11 +58,16 @@ cronAdd("log_attendence", "* * * * *", () => {
             $app.db().newQuery(`UPDATE workplace SET logs = CASE ${sqlCases} END`).execute();
             break;
         }
+        if (res.json) 
+            $app.db().newQuery(`
+                UPDATE workplace SET file_id = '${res.json.newFileId}' WHERE id = '${workplace.id}'
+            `).execute();
     }
 })
 
 // 100/hour => 72000 max subscription customer
 cronAdd("collect_rent", "@hourly", () => { 
+    return;
     const config = require(`${__hooks}/config.js`);
     const thisMonth = new Date().getMonth() + 1;
     const users = arrayOf(new DynamicModel({

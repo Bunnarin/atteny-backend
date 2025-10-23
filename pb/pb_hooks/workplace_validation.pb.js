@@ -13,21 +13,15 @@ onRecordValidate((e) => {
             const free_spots = employer.get('max_employees') - total_employees
             const diff = e.record.get('employees').length - e.record.original().get('employees').length
             if (diff > free_spots)
-                e.json(400) // this doesnt actually throws the error back to the /subscribe but it doesn throws an internal error
+                throw new ApiError(403, "You have exceeded your free spots");
         }
 
         // now we get_or_create employees
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const emails = e.record.get('employees')
-        // prevent sql injection
-        emails.forEach(email => {
-            if (!emailRegex.test(email)) 
-                throw new ApiError(400, "Invalid email format: " + email)
-        })
+        const emails = e.record.get('employees').filter(email => emailRegex.test(email));
         const emailStr = emails.join('", "');
         const existingUsers = arrayOf(new DynamicModel({"email": ""}));
-        $app.db().newQuery(`SELECT email FROM users WHERE email IN ("${emailStr}")`)
-            .all(existingUsers);
+        $app.db().newQuery(`SELECT email FROM users WHERE email IN ("${emailStr}")`).all(existingUsers);
         const userCollection = $app.findCollectionByNameOrId("users");
         emails.forEach(email => {
             if (existingUsers.find(user => user.email === email)) 
