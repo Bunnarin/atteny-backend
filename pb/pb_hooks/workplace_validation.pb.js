@@ -2,8 +2,6 @@ onRecordValidate((e) => {
     const config = require(`${__hooks}/config.js`)
     $app.expandRecord(e.record, ["employer"], null)
     const employer = e.record.expandedOne('employer');
-    console.log(employer.get('name'));
-    console.log(employer.get('refresh_token'));
 
     // paywall if the user doesnt have linked card
     const employees_changed = e.record.get('employees') != e.record.original().get('employees')
@@ -12,7 +10,7 @@ onRecordValidate((e) => {
         const free_spots = employer.get('max_employees') - total_employees
         const diff = e.record.get('employees').length - e.record.original().get('employees').length
         if (diff > free_spots)
-            e.json(400) // this doesnt actually throws the error back to the /subscribe but it doesn throws an internal error
+            throw new ApiError(403, "You have exceeded your free spots");
 
         // now we get_or_create employees
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,9 +41,9 @@ onRecordValidate((e) => {
             }),
         })
         if (res.statusCode != 200)
-            throw new ApiError(res.statusCode, "source: sheetserver: " + res.raw)
+            throw new ApiError(res.statusCode, "sheetserver: " + res.raw);
         
-        e.record.set('file_id', res.json.spreadsheetId)
+        e.record.set('file_id', res.json.spreadsheetId);
     }
     e.next()
 }, "workplace")

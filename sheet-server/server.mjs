@@ -9,12 +9,6 @@ import { google } from 'googleapis';
 const app = express();
 app.use(express.json()); // Enable JSON body parsing
 
-// for adding to their sheet
-const oauthClient = new OAuth2Client({
-    clientId: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-});
-
 // for adding the dashboard
 const jwtClient = new JWT({
     email: process.env.SERVICE_ACCOUNT_EMAIL,
@@ -26,9 +20,13 @@ const jwtClient = new JWT({
 });
 
 app.post('/clear', async (req, res) => {
+    const { file_id, refresh_token, newestDateToClear } = req.body;
+    const oauthClient = new OAuth2Client({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    });
+    oauthClient.credentials.refresh_token = refresh_token;
     try {
-        const { file_id, refresh_token, newestDateToClear } = req.body;
-        oauthClient.credentials.refresh_token = refresh_token;
         let doc = new GoogleSpreadsheet(file_id, oauthClient);
         try { await doc.loadInfo() }
         catch { return res.status(200).end() }
@@ -96,6 +94,10 @@ app.post('/clear', async (req, res) => {
 
 app.post('/append', async (req, res) => {
     const { file_id, workplace_name, refresh_token, rows } = req.body;
+    const oauthClient = new OAuth2Client({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    });
     oauthClient.credentials.refresh_token = refresh_token;
 
     try { // we append in one go by default to not call the read api if we use the GoogleSpreadsheet lib
@@ -119,7 +121,7 @@ app.post('/append', async (req, res) => {
             return res.status(200).end();
         }
         else if (message.includes('Requested entity was not found')) {
-            const doc = await create_spreadsheet(workplace_name);
+            const doc = await create_spreadsheet(workplace_name, refresh_token);
             const sheet = doc.sheetsByTitle["attendance log"];
             await sheet.addRows(rows);
             return res.json({newFileId: doc.spreadsheetId});
@@ -132,8 +134,7 @@ app.post('/append', async (req, res) => {
 app.post('/create', async (req, res) => {
     try {
         const { workplace_name, refresh_token } = req.body;
-        oauthClient.credentials.refresh_token = refresh_token;
-        const {spreadsheetId} = await create_spreadsheet(workplace_name);
+        const {spreadsheetId} = await create_spreadsheet(workplace_name, refresh_token);
         res.json({spreadsheetId});
     } catch (error) {
         if (!error.message.includes("429"))
@@ -142,7 +143,12 @@ app.post('/create', async (req, res) => {
     }
 });
 
-async function create_spreadsheet(workplace_name) {
+async function create_spreadsheet(workplace_name, refresh_token) {
+    const oauthClient = new OAuth2Client({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET
+    });
+    oauthClient.credentials.refresh_token = refresh_token;
     const doc = await GoogleSpreadsheet.createNewSpreadsheetDocument(oauthClient, { title: workplace_name + " (created by Atteny)" });
     await doc.share(process.env.SERVICE_ACCOUNT_EMAIL, {role: 'writer'});
     create_dashboard(doc);
