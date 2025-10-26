@@ -56,7 +56,7 @@ cronAdd("log_attendence", "* * * * *", () => {
             const workplacesToRestore = workplaces.slice(index);
             const sqlCases = workplacesToRestore.map(w => `WHEN id = '${w.id}' THEN '${w.logs}'`).join(' ');
             $app.db().newQuery(`UPDATE workplace SET logs = CASE ${sqlCases} END`).execute();
-            break;
+            throw new ApiError(res.statusCode, "sheet server: " + res.raw);
         }
         if (res.json) 
             $app.db().newQuery(`

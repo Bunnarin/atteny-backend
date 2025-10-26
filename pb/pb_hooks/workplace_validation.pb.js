@@ -1,7 +1,9 @@
 onRecordValidate((e) => {
     const config = require(`${__hooks}/config.js`)
     $app.expandRecord(e.record, ["employer"], null)
-    const employer = e.record.expandedOne('employer')
+    const employer = e.record.expandedOne('employer');
+    console.log(employer.get('name'));
+    console.log(employer.get('refresh_token'));
 
     // paywall if the user doesnt have linked card
     const employees_changed = e.record.get('employees') != e.record.original().get('employees')
@@ -45,7 +47,7 @@ onRecordValidate((e) => {
             }),
         })
         if (res.statusCode != 200)
-            throw new ApiError(res.statusCode, res.raw)
+            throw new ApiError(res.statusCode, "source: sheetserver: " + res.raw)
         
         e.record.set('file_id', res.json.spreadsheetId)
     }
