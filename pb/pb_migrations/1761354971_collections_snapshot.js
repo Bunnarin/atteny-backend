@@ -665,27 +665,13 @@ migrate((app) => {
           "hidden": false,
           "id": "number2770953496",
           "max": null,
-          "min": null,
+          "min": 0,
           "name": "max_employees",
           "onlyInt": true,
           "presentable": false,
           "required": false,
           "system": false,
           "type": "number"
-        },
-        {
-          "autogeneratePattern": "",
-          "hidden": false,
-          "id": "text587191692",
-          "max": 0,
-          "min": 0,
-          "name": "ip_address",
-          "pattern": "",
-          "presentable": false,
-          "primaryKey": false,
-          "required": false,
-          "system": false,
-          "type": "text"
         },
         {
           "autogeneratePattern": "",
@@ -731,7 +717,7 @@ migrate((app) => {
           "hidden": false,
           "id": "number3686730371",
           "max": null,
-          "min": null,
+          "min": 0,
           "name": "debt",
           "onlyInt": false,
           "presentable": false,
@@ -774,6 +760,17 @@ migrate((app) => {
           "required": false,
           "system": false,
           "type": "number"
+        },
+        {
+          "hidden": false,
+          "id": "date3217782773",
+          "max": "",
+          "min": "",
+          "name": "last_logout",
+          "presentable": false,
+          "required": false,
+          "system": false,
+          "type": "date"
         }
       ],
       "fileToken": {
@@ -782,8 +779,7 @@ migrate((app) => {
       "id": "_pb_users_auth_",
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
-        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''",
-        "CREATE UNIQUE INDEX `idx_kt94pxfjgD` ON `users` (`ip_address`)"
+        "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
       ],
       "listRule": null,
       "manageRule": null,
@@ -872,7 +868,7 @@ migrate((app) => {
           "id": "geoPoint1587448267",
           "name": "location",
           "presentable": false,
-          "required": true,
+          "required": false,
           "system": false,
           "type": "geoPoint"
         },
@@ -1019,10 +1015,10 @@ migrate((app) => {
           "autogeneratePattern": "",
           "hidden": false,
           "id": "text3208210256",
-          "max": 100,
-          "min": 15,
+          "max": 0,
+          "min": 0,
           "name": "id",
-          "pattern": "^[a-z0-9]+$",
+          "pattern": "$",
           "presentable": false,
           "primaryKey": true,
           "required": true,

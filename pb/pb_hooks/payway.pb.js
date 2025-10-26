@@ -1,13 +1,3 @@
-// for AB testing
-routerAdd("GET", "/payway/params", (e) => {
-    const config = require(`${__hooks}/config.js`)
-    return e.json(200, { 
-        license_price: config.get_license_price(e.auth.get('test_group')),
-        rent_price: config.get_rent_price(e.auth.get('test_group')),
-        merchant_id: config.PAYWAY_MERCHANT_ID()
-    })
-}, $apis.requireAuth())
-
 // this route hash and also create a transaction record sicne we can't rely on payway's return url
 routerAdd("POST", "/payway/hash", e => {
     const config = require(`${__hooks}/config.js`)
@@ -54,7 +44,7 @@ routerAdd("POST", "/payway/webhook/buy", e => {
         return e.json(400, { "error": "invalid transaction" });
 
     // fullfillment
-    const quantity = json.data.total_amount / config.get_license_price(e.auth.get('test_group'));
+    const quantity = json.data.total_amount / config.BUY_PRICE();
     e.auth.set('max_employees', e.auth.get('max_employees') + quantity);
     $app.saveNoValidate(e.auth);
     // delete the transaction

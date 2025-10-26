@@ -106,7 +106,7 @@ app.post('/append', async (req, res) => {
             valueInputOption: 'RAW',
             resource: { values: rows },
         });
-        res.status(200).end();
+        return res.status(200).end();
     } catch ({message}) {
         if (message.includes('429')) 
             return res.status(429).end();
@@ -156,8 +156,8 @@ async function create_spreadsheet(workplace_name) {
 async function create_dashboard(doc) {
     const template_ss = new GoogleSpreadsheet(process.env.TEMPLATE_SS_ID, jwtClient);
     await template_ss.loadInfo();
-    template_ss.sheetsByTitle['attendance dashboard'].copyToSpreadsheet(doc.spreadsheetId);
-    template_ss.sheetsByTitle['tag dashboard'].copyToSpreadsheet(doc.spreadsheetId);
+    for (let i=0; i<template_ss.sheetCount; i++)
+        template_ss.sheetsByIndex[i].copyToSpreadsheet(doc.spreadsheetId);
 }
 
 app.listen(3000, '127.0.0.1');

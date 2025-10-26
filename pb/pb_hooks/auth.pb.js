@@ -1,15 +1,8 @@
-// deals with ip_address and refresh_token
 onRecordAuthWithOAuth2Request((e) => {
-    if (e.isNewRecord)
-        e.createData = { ip_address: e.realIP() }
-    else {
-        //collect the refreshtoken if the frontend prompts for it
-        if (e.oAuth2User.refreshToken)
-            e.record.set('refresh_token', e.oAuth2User.refreshToken)
-        e.record.set('ip_address', e.realIP())
-        $app.saveNoValidate(e.record)
-    }
-    e.next()
+    //collect the refreshtoken if the frontend prompts for it
+    if (e.oAuth2User.refreshToken) 
+        e.record.set('refresh_token', e.oAuth2User.refreshToken)
+    e.next();
 })
 
 // default values
@@ -26,11 +19,10 @@ onRecordCreate((e) => {
     e.next()
 }, "users")
 
-// we check here because verified won't be populated until after creation
-onRecordAfterCreateSuccess((e) => {
-    if (!e.record.get('verified'))
-        e.record.set('ip_address', Math.random().toString(36).substring(2, 7))
-    $app.saveNoValidate(e.record)
-    e.next()
-}, "users")
+// when log out, we update the last logout time
+routerAdd("POST", "/logout", (e) => {
+    e.auth.set('last_logout', new Date());
+    $app.saveNoValidate(e.auth);
+    e.json(200);
+})
 
